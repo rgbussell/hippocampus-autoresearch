@@ -1,0 +1,10 @@
+data/
+runs/
+mlruns/
+__pycache__/
+*.pyc
+.pytest_cache/
+*.egg-info/
+.venv/
+checkpoints/
+.hygiene-deny.txt
