@@ -12,7 +12,10 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: W1 done (scaffold, data, frozen partition, frozen ruler, fence). Nothing has been trained yet.
+Status: W2 in progress. Scaffold, data, frozen partition, frozen ruler and
+fence are done; the budgeted trainer, the recipe seam and MLflow tracking
+are in place and smoke-tested on CPU. The GPU seed band (noise floor) is
+next; no climb has run yet.
 
 ## The fence, stated once
 
@@ -52,9 +55,25 @@ PYTHONPATH=src pytest -q         # the fence and hygiene tests
 scripts/install_hooks.sh         # pre-commit: hygiene + fence
 ```
 
-Training and the climb (`[train]` extra: torch, MONAI, MLflow) arrive in W2
-and W3. Every experiment is an MLflow run in the repo-local `mlruns/` store
-(override with `MLFLOW_TRACKING_URI`); `results.tsv` carries the run id.
+One experiment (`[train]` extra: torch, MONAI, MLflow):
+
+```bash
+pip install -e ".[train]"
+python train.py --seed 1337 --budget 300 --desc "plain baseline" --verdict baseline
+python scripts/show_curves.py --latest 1          # training curve from MLflow
+python scripts/seed_band.py --budget 300          # W2: noise floor + degeneracy check
+```
+
+`train.py` runs the fence, validates `recipe.py` against its declared knob
+space and parameter cap, trains for the budget (wall clock, after one
+warm-up step), predicts the validation split with sliding-window
+inference, scores with the frozen ruler, and appends one row to
+`results.tsv`. Every experiment is an MLflow run in the repo-local
+`mlruns/` store (override with `MLFLOW_TRACKING_URI`): all recipe knobs
+as params, commit and scorer hash as tags, training loss and learning
+rate per step, validation Dice per class, and `recipe.py` plus the
+per-case scores as artifacts. `results.tsv` carries the run id.
+A 20-second CPU smoke run of the plain baseline scores about 0.81.
 
 The full method, for a reader who trains models: [docs/METHOD.md](docs/METHOD.md).
 
