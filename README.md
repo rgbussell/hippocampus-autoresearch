@@ -12,10 +12,11 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: W2 in progress. Scaffold, data, frozen partition, frozen ruler and
-fence are done; the budgeted trainer, the recipe seam and MLflow tracking
-are in place and smoke-tested on CPU. The GPU seed band (noise floor) is
-next; no climb has run yet.
+Status: harness complete, no GPU results yet. Scaffold, data, frozen
+partition, frozen ruler and fence are done; the budgeted trainer, the
+recipe seam, MLflow tracking, the keep rule, the agent climb step and the
+random-edit climber are in place and dry-run end to end on CPU in a
+scratch clone. The GPU seed band (noise floor) is next; no climb has run.
 
 ## The fence, stated once
 
@@ -63,6 +64,19 @@ python train.py --seed 1337 --budget 300 --desc "plain baseline" --verdict basel
 python scripts/show_curves.py --latest 1          # training curve from MLflow
 python scripts/seed_band.py --budget 300          # W2: noise floor + degeneracy check
 ```
+
+The climb, once the noise floor exists:
+
+```bash
+# agent arm: edit recipe.py, then
+scripts/climb_step.sh "one-line description of the change"   # trains, scores, keeps or reverts
+# random-edit null arm, same budget and keep rule, never touches recipe.py
+python scripts/random_climber.py --n 50 --budget 300
+```
+
+`program.md` is the agent's standing instruction and is edited only by a
+person. `results.tsv` has one row per experiment with an `arm` column
+(baseline, agent, random, human), so every climb shares one ledger.
 
 `train.py` runs the fence, validates `recipe.py` against its declared knob
 space and parameter cap, trains for the budget (wall clock, after one

@@ -75,18 +75,21 @@ def load_case(cid: str):
 
 
 def normalize(x: np.ndarray, how: str) -> np.ndarray:
+    x = np.asarray(x, dtype=np.float32)
     if how == "none":
-        return x
-    if how == "minmax":
+        out = x
+    elif how == "minmax":
         lo, hi = float(x.min()), float(x.max())
-        return (x - lo) / (hi - lo + 1e-8)
-    if how == "zscore":
-        return (x - x.mean()) / (x.std() + 1e-8)
-    if how == "percentile_clip":
+        out = (x - lo) / (hi - lo + 1e-8)
+    elif how == "zscore":
+        out = (x - x.mean()) / (x.std() + 1e-8)
+    elif how == "percentile_clip":
         lo, hi = np.percentile(x, [0.5, 99.5])
         x = np.clip(x, lo, hi)
-        return (x - x.mean()) / (x.std() + 1e-8)
-    raise ValueError(how)
+        out = (x - x.mean()) / (x.std() + 1e-8)
+    else:
+        raise ValueError(how)
+    return np.asarray(out, dtype=np.float32)  # percentile scalars would otherwise promote to float64
 
 
 def pad_to(x: np.ndarray, shape, value=0.0) -> np.ndarray:
@@ -165,12 +168,14 @@ def build_loss(recipe: dict, device):
     w = recipe["class_weights"]
     wt = torch.tensor(w, dtype=torch.float32, device=device) if w else None
     if recipe["loss"] == "ce":
-        return torch.nn.CrossEntropyLoss(weight=wt)
+        return torch.nn.CrossEntropyLoss(weight=wt)          # target (B, H, W, D)
     if recipe["loss"] == "dice":
-        return DiceLoss(to_onehot_y=True, softmax=True)
-    if recipe["loss"] == "dice_ce":
-        return DiceCELoss(to_onehot_y=True, softmax=True, weight=wt)
-    raise ValueError(recipe["loss"])
+        inner = DiceLoss(to_onehot_y=True, softmax=True)      # target (B, 1, H, W, D)
+    elif recipe["loss"] == "dice_ce":
+        inner = DiceCELoss(to_onehot_y=True, softmax=True, weight=wt)
+    else:
+        raise ValueError(recipe["loss"])
+    return lambda logits, y: inner(logits, y[:, None])
 
 
 def build_optimizer(recipe: dict, params):
@@ -224,11 +229,18 @@ def main() -> int:
     ap.add_argument("--no-append", action="store_true", help="write result.json only; the harness records")
     ap.add_argument("--run-dir", type=Path, default=None)
     ap.add_argument("--log-every", type=int, default=10)
+    ap.add_argument("--arm", default="agent", help="baseline | agent | random | human")
+    ap.add_argument("--recipe-json", type=Path, default=None,
+                    help="use this recipe (JSON of RECIPE) instead of recipe.py; the random climber's path")
     args = ap.parse_args()
 
     run_fence()
     recipe_mod = importlib.import_module("recipe")
     recipe, knobs, cap = dict(recipe_mod.RECIPE), recipe_mod.KNOBS, recipe_mod.PARAM_CAP
+    if args.recipe_json:
+        loaded = json.loads(args.recipe_json.read_text())
+        recipe = {k: (tuple(v) if isinstance(v, list) and k in ("patch", "channels", "strides") else v)
+                  for k, v in loaded.items()}
     try:
         validate_recipe(recipe, knobs)
     except ValueError as e:
@@ -279,8 +291,8 @@ def main() -> int:
         mlflow.log_params({"seed": args.seed, "budget_s": args.budget, "device": device.type,
                            "n_params": n_params, "n_train": len(part.train), "n_val": len(part.val)})
         mlflow.set_tags({"commit": commit, "scorer_sha256": scorer_sha, "desc": args.desc,
-                         "verdict": args.verdict})
-        mlflow.log_artifact(str(ROOT / "recipe.py"))
+                         "verdict": args.verdict, "arm": args.arm})
+        mlflow.log_artifact(str(args.recipe_json if args.recipe_json else ROOT / "recipe.py"))
 
         def batch():
             xs, ys = [], []
@@ -291,7 +303,7 @@ def main() -> int:
                     xs.append(d["image"].float()); ys.append(d["label"].long()[0])
                 else:
                     xs.append(torch.from_numpy(xp)[None]); ys.append(torch.from_numpy(yp))
-            return torch.stack(xs).to(device), torch.stack(ys).to(device)
+            return torch.stack(xs).float().to(device), torch.stack(ys).long().to(device)
 
         def step(frac: float) -> float:
             for g in opt.param_groups:
@@ -357,7 +369,7 @@ def main() -> int:
                             "val_dice_post": summary["dice_post"], "steps": steps,
                             "train_seconds": train_seconds, "final_train_loss": last_loss})
         result = {
-            "exp": None, "commit": commit, "seed": args.seed, "val_dice_mean": summary["dice_mean"],
+            "exp": None, "arm": args.arm, "commit": commit, "seed": args.seed, "val_dice_mean": summary["dice_mean"],
             "val_dice_ant": summary["dice_ant"], "val_dice_post": summary["dice_post"],
             "train_seconds": round(train_seconds, 1), "steps": steps, "description": args.desc,
             "verdict": args.verdict, "mlflow_run_id": run_id, "n_params": n_params,
@@ -374,7 +386,7 @@ def main() -> int:
             result["exp"] = next_exp(RESULTS)
             append_row(RESULTS, result)
             (run_dir / "result.json").write_text(json.dumps(result, indent=1) + "\n")
-        print(json.dumps({k: result[k] for k in ("exp", "commit", "seed", "val_dice_mean", "val_dice_ant",
+        print(json.dumps({k: result[k] for k in ("exp", "arm", "commit", "seed", "val_dice_mean", "val_dice_ant",
                                                    "val_dice_post", "train_seconds", "steps", "verdict",
                                                    "mlflow_run_id", "n_params")}))
     return 0

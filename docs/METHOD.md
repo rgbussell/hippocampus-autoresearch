@@ -104,10 +104,11 @@ or runs out of memory is logged as *reverted*, not as an error.
    the same hardware. The budget is enforced by the harness, not the recipe.
 3. Predict the validation split with sliding-window inference.
 4. Score with the frozen ruler.
-5. Append one row to `results.tsv`: experiment index, git commit of
-   `recipe.py`, seed, `val_dice_mean`, `val_dice_ant`, `val_dice_post`,
-   training seconds, number of optimizer steps, a one-line description of the
-   change, the keep/revert verdict, and the MLflow run id.
+5. Append one row to `results.tsv`: experiment index, arm (baseline, agent,
+   random, human), git commit of `recipe.py`, seed, `val_dice_mean`,
+   `val_dice_ant`, `val_dice_post`, training seconds, number of optimizer
+   steps, a one-line description of the change, the keep/revert verdict, and
+   the MLflow run id. One writer (`hippo.record`) appends; nothing rewrites.
 
 Each experiment is also an MLflow run. The tracking store is a file store
 under `mlruns/` in the repo (gitignored; override with `MLFLOW_TRACKING_URI`),
@@ -156,8 +157,11 @@ Three arms share the budget, the ruler, and the keep rule:
 by a person, never by the agent, and it states the objective, the single
 editable file, the budget, the keep rule, the log format, and the forbidden
 list. A campaign runs unattended for 6 to 8 hours, about 50 experiments,
-with each experiment executed in a fresh git worktree so that no state leaks
-between runs through the working directory. Before the first run, the claim
+with each experiment writing only to a fresh run directory, `recipe.py`
+restored by git on every revert, and the harness refusing to start if any
+file other than `recipe.py` is modified. The random climber never touches
+`recipe.py`: it passes its mutated recipe to `train.py` as JSON, so the two
+arms share the ledger and the GPU but not the working tree. Before the first run, the claim
 and the kill condition are written to the program ledger:
 
 > Claim: within 50 experiments the agent keeps a recipe reaching at least

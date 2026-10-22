@@ -1,7 +1,8 @@
 """results.tsv: one row per experiment, append-only, single writer.
 
-Columns (see README): exp, commit, seed, val_dice_mean, val_dice_ant,
+Columns (see README): exp, arm, commit, seed, val_dice_mean, val_dice_ant,
 val_dice_post, train_seconds, steps, description, verdict, mlflow_run_id.
+Arms: baseline | agent | random | human.
 
 Verdicts: baseline | kept | reverted | confirm (second seed of a borderline
 gain) | refused (outside KNOBS, over PARAM_CAP, or out of memory) | smoke.
@@ -13,7 +14,7 @@ import json
 import statistics
 from pathlib import Path
 
-COLUMNS = ["exp", "commit", "seed", "val_dice_mean", "val_dice_ant", "val_dice_post",
+COLUMNS = ["exp", "arm", "commit", "seed", "val_dice_mean", "val_dice_ant", "val_dice_post",
            "train_seconds", "steps", "description", "verdict", "mlflow_run_id"]
 
 

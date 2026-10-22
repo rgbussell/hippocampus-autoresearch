@@ -34,7 +34,8 @@ OUT = ROOT / "manifests" / "w2_baseline_seed_band.json"
 def run(seed: int, budget: float, device: str, desc: str, verdict: str) -> dict:
     run_dir = ROOT / "runs" / f"w2-{desc.replace(' ', '-')}-s{seed}"
     cmd = [sys.executable, str(ROOT / "train.py"), "--seed", str(seed), "--budget", str(budget),
-           "--device", device, "--desc", desc, "--verdict", verdict, "--run-dir", str(run_dir)]
+           "--device", device, "--desc", desc, "--verdict", verdict, "--arm", "baseline",
+           "--run-dir", str(run_dir)]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stderr[-3000:], file=sys.stderr)
@@ -57,6 +58,7 @@ def main() -> int:
     kept = keep_decision(rerun["val_dice_mean"], scores[0], band["half_width_dice"]) == "kept"
     out = dict(band)
     out.update({
+        "recipe": results[0]["recipe"],  # the baseline recipe every arm starts from
         "budget_s": args.budget, "device": args.device, "seeds": args.seeds,
         "runs": [{"seed": r["seed"], "val_dice_mean": r["val_dice_mean"], "steps": r["steps"],
                   "mlflow_run_id": r["mlflow_run_id"], "exp": r["exp"]} for r in results],
