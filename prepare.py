@@ -11,6 +11,7 @@ Simpson et al., "A large annotated medical image dataset for the development
 and evaluation of segmentation algorithms", arXiv:1902.09063; Antonelli et
 al., Nature Communications 2022. Mirror: msd-for-monai S3 bucket.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -24,8 +25,7 @@ import nibabel as nib
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
-from hippo.partition import (Partition, PartitionLeak, assert_disjoint,  # noqa: E402
-                             build_partition, sha256_file)
+from hippo.partition import Partition, PartitionLeak, assert_disjoint, build_partition, sha256_file  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent
 DATA = ROOT / "data"
@@ -63,8 +63,7 @@ def extract() -> Path:
     if (task / "imagesTr").exists():
         return task
     with tarfile.open(TAR) as tf:
-        members = [m for m in tf.getmembers()
-                   if m.isfile() and "/._" not in m.name and not m.name.startswith("._")]
+        members = [m for m in tf.getmembers() if m.isfile() and "/._" not in m.name and not m.name.startswith("._")]
         tf.extractall(DATA, members=members, filter="data")
     return task
 
@@ -84,8 +83,11 @@ def scan(task: Path) -> tuple[dict[str, int], dict[str, str], dict[str, dict]]:
             shape = shape[:3]
         sizes[cid] = int(np.prod(shape))
         hashes[cid] = sha256_file(img)
-        meta[cid] = {"shape": shape, "label_sha256": sha256_file(lab),
-                     "zooms": [float(z) for z in im.header.get_zooms()[:3]]}
+        meta[cid] = {
+            "shape": shape,
+            "label_sha256": sha256_file(lab),
+            "zooms": [float(z) for z in im.header.get_zooms()[:3]],
+        }
     return sizes, hashes, meta
 
 
@@ -120,14 +122,20 @@ def main() -> int:
     if not ok:
         raise SystemExit("the fence did not fire on a planted leak; refusing to write a manifest")
     out = p.to_json()
-    out.update({
-        "source": {"url": URL, "tar_sha256": tar_digest, "tar_bytes": TAR_BYTES,
-                   "license": "CC BY-SA 4.0",
-                   "citation": "Simpson et al. arXiv:1902.09063; Antonelli et al. Nat Commun 2022"},
-        "labels": {"0": "background", "1": "anterior hippocampus", "2": "posterior hippocampus"},
-        "cases": meta,
-        "planted_leak_test_passes": ok,
-    })
+    out.update(
+        {
+            "source": {
+                "url": URL,
+                "tar_sha256": tar_digest,
+                "tar_bytes": TAR_BYTES,
+                "license": "CC BY-SA 4.0",
+                "citation": "Simpson et al. arXiv:1902.09063; Antonelli et al. Nat Commun 2022",
+            },
+            "labels": {"0": "background", "1": "anterior hippocampus", "2": "posterior hippocampus"},
+            "cases": meta,
+            "planted_leak_test_passes": ok,
+        }
+    )
     MANIFEST.parent.mkdir(exist_ok=True)
     MANIFEST.write_text(json.dumps(out, indent=1, sort_keys=True) + "\n")
     print(f"wrote {MANIFEST}: {out['n']}")

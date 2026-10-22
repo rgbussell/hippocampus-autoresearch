@@ -13,6 +13,7 @@ outside KNOBS, inconsistent channels/strides, a network above PARAM_CAP,
 or CUDA out of memory. The fence (scripts/fence.py) runs first; if it
 fails nothing is trained.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -49,7 +50,10 @@ def validate_recipe(recipe: dict, knobs: dict) -> None:
             raise ValueError(f"unknown knob {k!r}")
         spec = knobs[k]
         if "choices" in spec:
-            if v not in spec["choices"] and (not isinstance(v, (tuple, list)) or list(v) not in [list(c) if isinstance(c, (tuple, list)) else c for c in spec["choices"]]):
+            if v not in spec["choices"] and (
+                not isinstance(v, (tuple, list))
+                or list(v) not in [list(c) if isinstance(c, (tuple, list)) else c for c in spec["choices"]]
+            ):
                 raise ValueError(f"{k}={v!r} not in {spec['choices']}")
         elif "range" in spec:
             lo, hi = spec["range"]
@@ -93,7 +97,7 @@ def normalize(x: np.ndarray, how: str) -> np.ndarray:
 
 
 def pad_to(x: np.ndarray, shape, value=0.0) -> np.ndarray:
-    pads = [(0, max(0, s - d)) for d, s in zip(x.shape, shape)]
+    pads = [(0, max(0, s - d)) for d, s in zip(x.shape, shape, strict=True)]
     return np.pad(x, pads, constant_values=value) if any(p[1] for p in pads) else x
 
 
@@ -111,16 +115,16 @@ class PatchSampler:
         p = self.patch
         if self.rng.random() < self.fg and len(self.fg_idx[i]):
             c = self.fg_idx[i][self.rng.integers(len(self.fg_idx[i]))]
-            starts = [int(np.clip(ci - pi // 2, 0, si - pi)) for ci, pi, si in zip(c, p, x.shape)]
+            starts = [int(np.clip(ci - pi // 2, 0, si - pi)) for ci, pi, si in zip(c, p, x.shape, strict=True)]
         else:
-            starts = [int(self.rng.integers(0, si - pi + 1)) for pi, si in zip(p, x.shape)]
-        sl = tuple(slice(s, s + pi) for s, pi in zip(starts, p))
+            starts = [int(self.rng.integers(0, si - pi + 1)) for pi, si in zip(p, x.shape, strict=True)]
+        sl = tuple(slice(s, s + pi) for s, pi in zip(starts, p, strict=True))
         return x[sl], y[sl]
 
 
 def build_aug(recipe: dict, seed: int):
-    from monai.transforms import (Compose, RandAffined, RandFlipd, RandGaussianNoised,
-                                  RandRotate90d, RandScaleIntensityd)
+    from monai.transforms import Compose, RandAffined, RandFlipd, RandGaussianNoised, RandRotate90d, RandScaleIntensityd
+
     t = []
     if recipe["aug_flip"]:
         for ax in (0, 1, 2):
@@ -128,8 +132,16 @@ def build_aug(recipe: dict, seed: int):
     if recipe["aug_rot90"]:
         t.append(RandRotate90d(keys=["image", "label"], prob=0.5, max_k=3))
     if recipe["aug_affine"]:
-        t.append(RandAffined(keys=["image", "label"], prob=0.3, rotate_range=(0.26, 0.26, 0.26),
-                             scale_range=(0.15, 0.15, 0.15), mode=("bilinear", "nearest"), padding_mode="border"))
+        t.append(
+            RandAffined(
+                keys=["image", "label"],
+                prob=0.3,
+                rotate_range=(0.26, 0.26, 0.26),
+                scale_range=(0.15, 0.15, 0.15),
+                mode=("bilinear", "nearest"),
+                padding_mode="border",
+            )
+        )
     if recipe["aug_scale_intensity"] > 0:
         t.append(RandScaleIntensityd(keys=["image"], factors=recipe["aug_scale_intensity"], prob=0.5))
     if recipe["aug_gaussian_noise"] > 0:
@@ -145,18 +157,25 @@ def build_aug(recipe: dict, seed: int):
 # model, loss, optimizer
 # ----------------------------------------------------------------------------
 def build_model(recipe: dict):
-    import torch
     from monai.networks.nets import DynUNet
+
     ch = list(recipe["channels"])
     st = [1] + list(recipe["strides"])
     n = len(ch)
     ds = bool(recipe["deep_supervision"])
     model = DynUNet(
-        spatial_dims=3, in_channels=1, out_channels=3,
-        kernel_size=[3] * n, strides=st, upsample_kernel_size=st[1:], filters=ch,
+        spatial_dims=3,
+        in_channels=1,
+        out_channels=3,
+        kernel_size=[3] * n,
+        strides=st,
+        upsample_kernel_size=st[1:],
+        filters=ch,
         norm_name=("instance" if recipe["norm"] == "instance" else "batch"),
-        deep_supervision=ds, deep_supr_num=max(1, min(2, n - 2)) if ds else 1,
-        res_block=recipe["num_res_units"] > 0, dropout=recipe["dropout"] or None,
+        deep_supervision=ds,
+        deep_supr_num=max(1, min(2, n - 2)) if ds else 1,
+        res_block=recipe["num_res_units"] > 0,
+        dropout=recipe["dropout"] or None,
     )
     n_params = sum(p.numel() for p in model.parameters())
     return model, n_params
@@ -165,12 +184,13 @@ def build_model(recipe: dict):
 def build_loss(recipe: dict, device):
     import torch
     from monai.losses import DiceCELoss, DiceLoss
+
     w = recipe["class_weights"]
     wt = torch.tensor(w, dtype=torch.float32, device=device) if w else None
     if recipe["loss"] == "ce":
-        return torch.nn.CrossEntropyLoss(weight=wt)          # target (B, H, W, D)
+        return torch.nn.CrossEntropyLoss(weight=wt)  # target (B, H, W, D)
     if recipe["loss"] == "dice":
-        inner = DiceLoss(to_onehot_y=True, softmax=True)      # target (B, 1, H, W, D)
+        inner = DiceLoss(to_onehot_y=True, softmax=True)  # target (B, 1, H, W, D)
     elif recipe["loss"] == "dice_ce":
         inner = DiceCELoss(to_onehot_y=True, softmax=True, weight=wt)
     else:
@@ -180,13 +200,15 @@ def build_loss(recipe: dict, device):
 
 def build_optimizer(recipe: dict, params):
     import torch
+
     if recipe["optimizer"] == "adam":
         return torch.optim.Adam(params, lr=recipe["lr"], weight_decay=recipe["weight_decay"])
     if recipe["optimizer"] == "adamw":
         return torch.optim.AdamW(params, lr=recipe["lr"], weight_decay=recipe["weight_decay"])
     if recipe["optimizer"] == "sgd_nesterov":
-        return torch.optim.SGD(params, lr=recipe["lr"], momentum=recipe["momentum"], nesterov=True,
-                               weight_decay=recipe["weight_decay"])
+        return torch.optim.SGD(
+            params, lr=recipe["lr"], momentum=recipe["momentum"], nesterov=True, weight_decay=recipe["weight_decay"]
+        )
     raise ValueError(recipe["optimizer"])
 
 
@@ -206,8 +228,9 @@ def lr_at(recipe: dict, frac: float) -> float:
 # ----------------------------------------------------------------------------
 def git_head() -> str:
     try:
-        return subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
-                              capture_output=True, text=True, check=True).stdout.strip()
+        return subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True, check=True
+        ).stdout.strip()
     except Exception:
         return "nogit"
 
@@ -230,8 +253,12 @@ def main() -> int:
     ap.add_argument("--run-dir", type=Path, default=None)
     ap.add_argument("--log-every", type=int, default=10)
     ap.add_argument("--arm", default="agent", help="baseline | agent | random | human")
-    ap.add_argument("--recipe-json", type=Path, default=None,
-                    help="use this recipe (JSON of RECIPE) instead of recipe.py; the random climber's path")
+    ap.add_argument(
+        "--recipe-json",
+        type=Path,
+        default=None,
+        help="use this recipe (JSON of RECIPE) instead of recipe.py; the random climber's path",
+    )
     args = ap.parse_args()
 
     run_fence()
@@ -239,8 +266,10 @@ def main() -> int:
     recipe, knobs, cap = dict(recipe_mod.RECIPE), recipe_mod.KNOBS, recipe_mod.PARAM_CAP
     if args.recipe_json:
         loaded = json.loads(args.recipe_json.read_text())
-        recipe = {k: (tuple(v) if isinstance(v, list) and k in ("patch", "channels", "strides") else v)
-                  for k, v in loaded.items()}
+        recipe = {
+            k: (tuple(v) if isinstance(v, list) and k in ("patch", "channels", "strides") else v)
+            for k, v in loaded.items()
+        }
     try:
         validate_recipe(recipe, knobs)
     except ValueError as e:
@@ -248,6 +277,7 @@ def main() -> int:
         return REFUSED
 
     import torch
+
     torch.manual_seed(args.seed)
     rng = np.random.default_rng(args.seed)
     torch.backends.cudnn.benchmark = False
@@ -277,6 +307,7 @@ def main() -> int:
     # MLflow: repo-local file store unless MLFLOW_TRACKING_URI says otherwise
     os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
     import mlflow
+
     mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", f"file:{ROOT / 'mlruns'}"))
     mlflow.set_experiment(EXPERIMENT)
     run_name = f"{(args.desc or 'exp')[:40]}-s{args.seed}"
@@ -286,12 +317,22 @@ def main() -> int:
         run_dir = run_dir if run_dir.is_absolute() else (Path.cwd() / run_dir)
         run_dir = run_dir.resolve()
         run_dir.mkdir(parents=True, exist_ok=True)
-        mlflow.log_params({k: (json.dumps(v) if isinstance(v, (list, tuple, dict)) or v is None else v)
-                           for k, v in recipe.items()})
-        mlflow.log_params({"seed": args.seed, "budget_s": args.budget, "device": device.type,
-                           "n_params": n_params, "n_train": len(part.train), "n_val": len(part.val)})
-        mlflow.set_tags({"commit": commit, "scorer_sha256": scorer_sha, "desc": args.desc,
-                         "verdict": args.verdict, "arm": args.arm})
+        mlflow.log_params(
+            {k: (json.dumps(v) if isinstance(v, (list, tuple, dict)) or v is None else v) for k, v in recipe.items()}
+        )
+        mlflow.log_params(
+            {
+                "seed": args.seed,
+                "budget_s": args.budget,
+                "device": device.type,
+                "n_params": n_params,
+                "n_train": len(part.train),
+                "n_val": len(part.val),
+            }
+        )
+        mlflow.set_tags(
+            {"commit": commit, "scorer_sha256": scorer_sha, "desc": args.desc, "verdict": args.verdict, "arm": args.arm}
+        )
         mlflow.log_artifact(str(args.recipe_json if args.recipe_json else ROOT / "recipe.py"))
 
         def batch():
@@ -300,9 +341,11 @@ def main() -> int:
                 xp, yp = sampler.sample()
                 if aug is not None:
                     d = aug({"image": torch.from_numpy(xp)[None], "label": torch.from_numpy(yp)[None]})
-                    xs.append(d["image"].float()); ys.append(d["label"].long()[0])
+                    xs.append(d["image"].float())
+                    ys.append(d["label"].long()[0])
                 else:
-                    xs.append(torch.from_numpy(xp)[None]); ys.append(torch.from_numpy(yp))
+                    xs.append(torch.from_numpy(xp)[None])
+                    ys.append(torch.from_numpy(yp))
             return torch.stack(xs).float().to(device), torch.stack(ys).long().to(device)
 
         def step(frac: float) -> float:
@@ -312,7 +355,7 @@ def main() -> int:
             opt.zero_grad(set_to_none=True)
             out = model(x)
             if out.ndim == 6:  # deep supervision: (B, heads, C, ...)
-                weights = [1.0] + [0.5 ** i for i in range(1, out.shape[1])]
+                weights = [1.0] + [0.5**i for i in range(1, out.shape[1])]
                 loss = sum(w * loss_fn(out[:, i], y) for i, w in enumerate(weights)) / sum(weights)
             else:
                 loss = loss_fn(out, y)
@@ -335,7 +378,7 @@ def main() -> int:
                 steps += 1
                 losses.append(last_loss)
                 if steps % args.log_every == 0:
-                    mlflow.log_metric("train_loss", float(np.mean(losses[-args.log_every:])), step=steps)
+                    mlflow.log_metric("train_loss", float(np.mean(losses[-args.log_every :])), step=steps)
                     mlflow.log_metric("lr", lr_at(recipe, elapsed / args.budget), step=steps)
             train_seconds = time.time() - t0
         except torch.cuda.OutOfMemoryError:
@@ -345,6 +388,7 @@ def main() -> int:
 
         # inference on val, then the frozen ruler
         from monai.inferers import sliding_window_inference
+
         model.eval()
         pred_dir = run_dir / "pred"
         pred_dir.mkdir(exist_ok=True)
@@ -354,26 +398,45 @@ def main() -> int:
                 shape = x.shape
                 xn = pad_to(normalize(x, recipe["normalization"]), patch)
                 xt = torch.from_numpy(xn)[None, None].to(device)
-                logits = sliding_window_inference(xt, roi_size=patch, sw_batch_size=4, predictor=model,
-                                                  overlap=0.5, mode="gaussian")
+                logits = sliding_window_inference(
+                    xt, roi_size=patch, sw_batch_size=4, predictor=model, overlap=0.5, mode="gaussian"
+                )
                 pred = logits.argmax(1)[0].cpu().numpy().astype(np.uint8)
                 pred = pred[: shape[0], : shape[1], : shape[2]]
                 nib.save(nib.Nifti1Image(pred, affine), str(pred_dir / f"{cid}.nii.gz"))
         from eval.score import score_split  # the frozen ruler
+
         rows, summary = score_split(pred_dir, "val", ROOT / "manifests" / "partition.json", DATA)
         with open(run_dir / "val_scores.tsv", "w") as f:
             f.write("case\tdice_ant\tdice_post\tdice_mean\n")
             for r in rows:
                 f.write(f"{r['case']}\t{r['dice_ant']:.6f}\t{r['dice_post']:.6f}\t{r['dice_mean']:.6f}\n")
-        mlflow.log_metrics({"val_dice_mean": summary["dice_mean"], "val_dice_ant": summary["dice_ant"],
-                            "val_dice_post": summary["dice_post"], "steps": steps,
-                            "train_seconds": train_seconds, "final_train_loss": last_loss})
+        mlflow.log_metrics(
+            {
+                "val_dice_mean": summary["dice_mean"],
+                "val_dice_ant": summary["dice_ant"],
+                "val_dice_post": summary["dice_post"],
+                "steps": steps,
+                "train_seconds": train_seconds,
+                "final_train_loss": last_loss,
+            }
+        )
         result = {
-            "exp": None, "arm": args.arm, "commit": commit, "seed": args.seed, "val_dice_mean": summary["dice_mean"],
-            "val_dice_ant": summary["dice_ant"], "val_dice_post": summary["dice_post"],
-            "train_seconds": round(train_seconds, 1), "steps": steps, "description": args.desc,
-            "verdict": args.verdict, "mlflow_run_id": run_id, "n_params": n_params,
-            "scorer_sha256": scorer_sha, "recipe": {k: (list(v) if isinstance(v, tuple) else v) for k, v in recipe.items()},
+            "exp": None,
+            "arm": args.arm,
+            "commit": commit,
+            "seed": args.seed,
+            "val_dice_mean": summary["dice_mean"],
+            "val_dice_ant": summary["dice_ant"],
+            "val_dice_post": summary["dice_post"],
+            "train_seconds": round(train_seconds, 1),
+            "steps": steps,
+            "description": args.desc,
+            "verdict": args.verdict,
+            "mlflow_run_id": run_id,
+            "n_params": n_params,
+            "scorer_sha256": scorer_sha,
+            "recipe": {k: (list(v) if isinstance(v, tuple) else v) for k, v in recipe.items()},
             "run_dir": str(run_dir.relative_to(ROOT)) if run_dir.is_relative_to(ROOT) else str(run_dir),
         }
         (run_dir / "result.json").write_text(json.dumps(result, indent=1) + "\n")
@@ -386,9 +449,27 @@ def main() -> int:
             result["exp"] = next_exp(RESULTS)
             append_row(RESULTS, result)
             (run_dir / "result.json").write_text(json.dumps(result, indent=1) + "\n")
-        print(json.dumps({k: result[k] for k in ("exp", "arm", "commit", "seed", "val_dice_mean", "val_dice_ant",
-                                                   "val_dice_post", "train_seconds", "steps", "verdict",
-                                                   "mlflow_run_id", "n_params")}))
+        print(
+            json.dumps(
+                {
+                    k: result[k]
+                    for k in (
+                        "exp",
+                        "arm",
+                        "commit",
+                        "seed",
+                        "val_dice_mean",
+                        "val_dice_ant",
+                        "val_dice_post",
+                        "train_seconds",
+                        "steps",
+                        "verdict",
+                        "mlflow_run_id",
+                        "n_params",
+                    )
+                }
+            )
+        )
     return 0
 
 

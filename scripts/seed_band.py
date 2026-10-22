@@ -16,6 +16,7 @@ The keep threshold used from then on is half_width_dice. If the same-seed
 rerun delta exceeds it, the threshold is raised to that delta and the
 manifest says so.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -33,9 +34,24 @@ OUT = ROOT / "manifests" / "w2_baseline_seed_band.json"
 
 def run(seed: int, budget: float, device: str, desc: str, verdict: str) -> dict:
     run_dir = ROOT / "runs" / f"w2-{desc.replace(' ', '-')}-s{seed}"
-    cmd = [sys.executable, str(ROOT / "train.py"), "--seed", str(seed), "--budget", str(budget),
-           "--device", device, "--desc", desc, "--verdict", verdict, "--arm", "baseline",
-           "--run-dir", str(run_dir)]
+    cmd = [
+        sys.executable,
+        str(ROOT / "train.py"),
+        "--seed",
+        str(seed),
+        "--budget",
+        str(budget),
+        "--device",
+        device,
+        "--desc",
+        desc,
+        "--verdict",
+        verdict,
+        "--arm",
+        "baseline",
+        "--run-dir",
+        str(run_dir),
+    ]
     r = subprocess.run(cmd, capture_output=True, text=True)
     if r.returncode != 0:
         print(r.stderr[-3000:], file=sys.stderr)
@@ -57,22 +73,55 @@ def main() -> int:
     threshold = max(band["half_width_dice"], delta)
     kept = keep_decision(rerun["val_dice_mean"], scores[0], band["half_width_dice"]) == "kept"
     out = dict(band)
-    out.update({
-        "recipe": results[0]["recipe"],  # the baseline recipe every arm starts from
-        "budget_s": args.budget, "device": args.device, "seeds": args.seeds,
-        "runs": [{"seed": r["seed"], "val_dice_mean": r["val_dice_mean"], "steps": r["steps"],
-                  "mlflow_run_id": r["mlflow_run_id"], "exp": r["exp"]} for r in results],
-        "rerun_same_seed": {"val_dice_mean": rerun["val_dice_mean"], "steps": rerun["steps"],
-                            "mlflow_run_id": rerun["mlflow_run_id"], "exp": rerun["exp"]},
-        "rerun_same_seed_delta": delta,
-        "rerun_same_seed_kept": kept,
-        "keep_threshold_dice": threshold,
-        "keep_threshold_note": ("half-width of the seed band" if threshold == band["half_width_dice"]
-                                else "raised to the same-seed rerun delta, which exceeded the half-width"),
-    })
+    out.update(
+        {
+            "recipe": results[0]["recipe"],  # the baseline recipe every arm starts from
+            "budget_s": args.budget,
+            "device": args.device,
+            "seeds": args.seeds,
+            "runs": [
+                {
+                    "seed": r["seed"],
+                    "val_dice_mean": r["val_dice_mean"],
+                    "steps": r["steps"],
+                    "mlflow_run_id": r["mlflow_run_id"],
+                    "exp": r["exp"],
+                }
+                for r in results
+            ],
+            "rerun_same_seed": {
+                "val_dice_mean": rerun["val_dice_mean"],
+                "steps": rerun["steps"],
+                "mlflow_run_id": rerun["mlflow_run_id"],
+                "exp": rerun["exp"],
+            },
+            "rerun_same_seed_delta": delta,
+            "rerun_same_seed_kept": kept,
+            "keep_threshold_dice": threshold,
+            "keep_threshold_note": (
+                "half-width of the seed band"
+                if threshold == band["half_width_dice"]
+                else "raised to the same-seed rerun delta, which exceeded the half-width"
+            ),
+        }
+    )
     OUT.write_text(json.dumps(out, indent=1) + "\n")
-    print(json.dumps({k: out[k] for k in ("n_seeds", "scores", "mean", "half_width_dice",
-                                           "rerun_same_seed_delta", "rerun_same_seed_kept", "keep_threshold_dice")}))
+    print(
+        json.dumps(
+            {
+                k: out[k]
+                for k in (
+                    "n_seeds",
+                    "scores",
+                    "mean",
+                    "half_width_dice",
+                    "rerun_same_seed_delta",
+                    "rerun_same_seed_kept",
+                    "keep_threshold_dice",
+                )
+            }
+        )
+    )
     return 0 if not kept else 1
 
 

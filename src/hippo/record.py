@@ -1,8 +1,9 @@
 """Append one results.tsv row from a result.json (the single writer's CLI).
 
-    python -m hippo.record --result runs/x/result.json --verdict kept --arm agent
-    python -m hippo.record --refused --arm agent --desc "..." --seed 1337
+python -m hippo.record --result runs/x/result.json --verdict kept --arm agent
+python -m hippo.record --refused --arm agent --desc "..." --seed 1337
 """
+
 from __future__ import annotations
 
 import argparse
@@ -26,11 +27,26 @@ def main() -> int:
     ap.add_argument("--seed", type=int, default=0)
     args = ap.parse_args()
     if args.refused:
-        commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
-                                capture_output=True, text=True).stdout.strip() or "nogit"
-        row = {"exp": next_exp(RESULTS), "arm": args.arm, "commit": commit, "seed": args.seed,
-               "val_dice_mean": "", "val_dice_ant": "", "val_dice_post": "", "train_seconds": "",
-               "steps": "", "description": args.desc, "verdict": "refused", "mlflow_run_id": ""}
+        commit = (
+            subprocess.run(
+                ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True
+            ).stdout.strip()
+            or "nogit"
+        )
+        row = {
+            "exp": next_exp(RESULTS),
+            "arm": args.arm,
+            "commit": commit,
+            "seed": args.seed,
+            "val_dice_mean": "",
+            "val_dice_ant": "",
+            "val_dice_post": "",
+            "train_seconds": "",
+            "steps": "",
+            "description": args.desc,
+            "verdict": "refused",
+            "mlflow_run_id": "",
+        }
     else:
         r = json.loads(args.result.read_text())
         row = dict(r, exp=next_exp(RESULTS), arm=args.arm, verdict=args.verdict)

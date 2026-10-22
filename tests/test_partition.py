@@ -1,11 +1,11 @@
 """The fence must fire on a planted leak and stay quiet on the real split."""
+
 import json
 from pathlib import Path
 
 import pytest
 
-from hippo.partition import (Partition, PartitionLeak, assert_disjoint,
-                             build_partition, load_partition, SIZES)
+from hippo.partition import SIZES, Partition, PartitionLeak, assert_disjoint, build_partition, load_partition
 
 ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = ROOT / "manifests" / "partition.json"

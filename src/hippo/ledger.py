@@ -7,6 +7,7 @@ Arms: baseline | agent | random | human.
 Verdicts: baseline | kept | reverted | confirm (second seed of a borderline
 gain) | refused (outside KNOBS, over PARAM_CAP, or out of memory) | smoke.
 """
+
 from __future__ import annotations
 
 import csv
@@ -14,8 +15,20 @@ import json
 import statistics
 from pathlib import Path
 
-COLUMNS = ["exp", "arm", "commit", "seed", "val_dice_mean", "val_dice_ant", "val_dice_post",
-           "train_seconds", "steps", "description", "verdict", "mlflow_run_id"]
+COLUMNS = [
+    "exp",
+    "arm",
+    "commit",
+    "seed",
+    "val_dice_mean",
+    "val_dice_ant",
+    "val_dice_post",
+    "train_seconds",
+    "steps",
+    "description",
+    "verdict",
+    "mlflow_run_id",
+]
 
 
 def read_rows(path: Path) -> list[dict]:

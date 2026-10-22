@@ -6,6 +6,7 @@ committed DVC remote) plus an OPTIONAL untracked deny-list of private terms
 at .hygiene-deny.txt (one regex per line; gitignored so the terms themselves
 never ship). Runs in the suite and in the pre-commit hook.
 """
+
 from __future__ import annotations
 
 import re
@@ -29,8 +30,7 @@ SKIP_SUFFIX = {".png", ".gif", ".jpg", ".jpeg", ".nii", ".gz", ".tar", ".pt", ".
 
 
 def _git(*args: str) -> str:
-    return subprocess.run(["git", "-C", str(ROOT), *args], check=True,
-                          capture_output=True, text=True).stdout
+    return subprocess.run(["git", "-C", str(ROOT), *args], check=True, capture_output=True, text=True).stdout
 
 
 def _patterns() -> dict[str, re.Pattern]:

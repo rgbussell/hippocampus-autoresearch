@@ -1,4 +1,5 @@
 """INS-3: the scanner catches a planted hold-out id; the scorer hash is pinned."""
+
 import json
 import sys
 from pathlib import Path
@@ -7,6 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "scripts"))
 sys.path.insert(0, str(ROOT / "src"))
 from fence import scan_for_ids  # noqa: E402
+
 from hippo.partition import sha256_file  # noqa: E402
 
 
@@ -26,6 +28,7 @@ def test_scorer_hash_matches_frozen_manifest():
     frozen = ROOT / "manifests" / "frozen.json"
     if not frozen.exists():
         import pytest
+
         pytest.skip("not frozen yet")
     d = json.loads(frozen.read_text())
     assert sha256_file(ROOT / d["path"]) == d["sha256"]

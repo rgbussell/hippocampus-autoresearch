@@ -9,6 +9,7 @@ file store (mlruns/ or MLFLOW_TRACKING_URI). A kept change should be
 inspected, not just trusted: a loss curve that never moved is a budget
 problem, not a recipe result.
 """
+
 from __future__ import annotations
 
 import argparse
@@ -27,6 +28,7 @@ def main() -> int:
     os.environ.setdefault("MLFLOW_ALLOW_FILE_STORE", "true")
     import mlflow
     from mlflow.tracking import MlflowClient
+
     mlflow.set_tracking_uri(os.environ.get("MLFLOW_TRACKING_URI", f"file:{ROOT / 'mlruns'}"))
     client = MlflowClient()
     exp = client.get_experiment_by_name("hippocampus-autoresearch")
@@ -39,20 +41,27 @@ def main() -> int:
     if not ids:
         raise SystemExit("give run ids or --latest N")
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     fig, (a1, a2) = plt.subplots(1, 2, figsize=(10, 3.6))
     for rid in ids:
         r = client.get_run(rid)
         hist = client.get_metric_history(rid, "train_loss")
-        xs = [h.step for h in hist]; ys = [h.value for h in hist]
+        xs = [h.step for h in hist]
+        ys = [h.value for h in hist]
         label = f"{r.data.tags.get('desc', '')[:24]} s{r.data.params.get('seed')} val={r.data.metrics.get('val_dice_mean', float('nan')):.3f}"
         a1.plot(xs, ys, label=label)
         lr = client.get_metric_history(rid, "lr")
         a2.plot([h.step for h in lr], [h.value for h in lr], label=label)
         print(f"{rid[:8]}  {label}  steps={r.data.metrics.get('steps')}  s={r.data.metrics.get('train_seconds')}")
-    a1.set_xlabel("optimizer step"); a1.set_ylabel("train loss"); a1.set_title("training loss")
-    a2.set_xlabel("optimizer step"); a2.set_ylabel("lr"); a2.set_title("learning rate")
+    a1.set_xlabel("optimizer step")
+    a1.set_ylabel("train loss")
+    a1.set_title("training loss")
+    a2.set_xlabel("optimizer step")
+    a2.set_ylabel("lr")
+    a2.set_title("learning rate")
     a1.legend(fontsize=7)
     fig.tight_layout()
     args.out.parent.mkdir(parents=True, exist_ok=True)

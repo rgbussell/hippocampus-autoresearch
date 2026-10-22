@@ -1,5 +1,5 @@
 """INS-1 nulls on synthetic volumes (fast, no data) + the scorer's refusals."""
-import os
+
 import sys
 from pathlib import Path
 
@@ -40,14 +40,16 @@ def test_shift_is_strictly_below_identity_and_monotone():
     r = _ref()
     prev = 1.0
     for k in (1, 2, 3):
-        s = np.zeros_like(r); s[k:] = r[:-k]
+        s = np.zeros_like(r)
+        s[k:] = r[:-k]
         d = dice_per_case(s, r)["dice_mean"]
         assert d < prev
         prev = d
 
 
 def test_both_empty_label_scores_one():
-    r = np.zeros((4, 4, 4), dtype=np.int16); r[0, 0, 0] = 1
+    r = np.zeros((4, 4, 4), dtype=np.int16)
+    r[0, 0, 0] = 1
     d = dice_per_case(r, r)
     assert d["dice_post"] == 1.0 and d["dice_ant"] == 1.0
 

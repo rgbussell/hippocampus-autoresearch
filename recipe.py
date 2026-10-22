@@ -17,36 +17,37 @@ Baseline (deliberately plain): min-max normalization, uniform random 32^3
 patches, plain cross-entropy, Adam at a flat 1e-3, no augmentation, no deep
 supervision, batch 2, a small U-Net. Expected near 0.80 mean Dice.
 """
+
 from __future__ import annotations
 
 PARAM_CAP = 8_000_000  # parameters; a bigger network is refused (logged as reverted)
 
 RECIPE = {
     # intensity normalization applied per volume before patching
-    "normalization": "minmax",          # none | minmax | zscore | percentile_clip
+    "normalization": "minmax",  # none | minmax | zscore | percentile_clip
     # patch geometry and sampling
-    "patch": (32, 32, 32),              # fits the ~35x50x35 volumes with padding
-    "fg_oversample": 0.0,               # fraction of patches centred on a foreground voxel
+    "patch": (32, 32, 32),  # fits the ~35x50x35 volumes with padding
+    "fg_oversample": 0.0,  # fraction of patches centred on a foreground voxel
     # loss
-    "loss": "ce",                       # ce | dice | dice_ce
-    "class_weights": None,              # None or [w_bg, w_ant, w_post]
+    "loss": "ce",  # ce | dice | dice_ce
+    "class_weights": None,  # None or [w_bg, w_ant, w_post]
     # optimizer and schedule
-    "optimizer": "adam",                # adam | sgd_nesterov | adamw
+    "optimizer": "adam",  # adam | sgd_nesterov | adamw
     "lr": 1e-3,
-    "momentum": 0.99,                   # sgd only
+    "momentum": 0.99,  # sgd only
     "weight_decay": 0.0,
-    "schedule": "flat",                 # flat | poly | cosine
+    "schedule": "flat",  # flat | poly | cosine
     # augmentation (applied to the training patch)
     "aug_flip": False,
     "aug_rot90": False,
-    "aug_scale_intensity": 0.0,         # +/- fraction, 0 = off
-    "aug_gaussian_noise": 0.0,          # std, 0 = off
-    "aug_affine": False,                # small random affine
+    "aug_scale_intensity": 0.0,  # +/- fraction, 0 = off
+    "aug_gaussian_noise": 0.0,  # std, 0 = off
+    "aug_affine": False,  # small random affine
     # network
-    "channels": (16, 32, 64),           # U-Net channels per level
+    "channels": (16, 32, 64),  # U-Net channels per level
     "strides": (2, 2),
     "num_res_units": 0,
-    "norm": "batch",                    # batch | instance
+    "norm": "batch",  # batch | instance
     "deep_supervision": False,
     "dropout": 0.0,
     # batching

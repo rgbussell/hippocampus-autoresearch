@@ -5,6 +5,7 @@ image-voxel-count tercile, sizes 182 / 39 / 39. The hold-out is never read
 by the loop; `assert_disjoint` is the fence that proves it, and the test
 suite plants a violation to prove the fence can fire.
 """
+
 from __future__ import annotations
 
 import hashlib
@@ -48,7 +49,7 @@ class Partition:
         }
 
     @classmethod
-    def from_json(cls, d: dict) -> "Partition":
+    def from_json(cls, d: dict) -> Partition:
         return cls(
             seed=int(d["seed"]),
             train=list(d["train"]),
@@ -84,8 +85,9 @@ def assert_disjoint(p: Partition) -> None:
             seen[cid] = name
 
 
-def build_partition(case_sizes: dict[str, int], image_hashes: dict[str, str],
-                    seed: int = SEED, sizes: dict[str, int] = SIZES) -> Partition:
+def build_partition(
+    case_sizes: dict[str, int], image_hashes: dict[str, str], seed: int = SEED, sizes: dict[str, int] = SIZES
+) -> Partition:
     """Stratified split by voxel-count tercile. Deterministic for a seed.
 
     case_sizes: case id -> number of image voxels.
@@ -107,9 +109,11 @@ def build_partition(case_sizes: dict[str, int], image_hashes: dict[str, str],
         n_val = round(sizes["val"] * n / len(ids))
         n_hold = round(sizes["holdout"] * n / len(ids))
         p.val += members[:n_val]
-        p.holdout += members[n_val:n_val + n_hold]
-        p.train += members[n_val + n_hold:]
-        quota["val"] += n_val; quota["holdout"] += n_hold; quota["train"] += n - n_val - n_hold
+        p.holdout += members[n_val : n_val + n_hold]
+        p.train += members[n_val + n_hold :]
+        quota["val"] += n_val
+        quota["holdout"] += n_hold
+        quota["train"] += n - n_val - n_hold
     # Rounding can leave the totals one off the design; move singletons from
     # train so the committed sizes are exactly the designed ones.
     for name in ("val", "holdout"):

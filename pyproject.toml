@@ -17,3 +17,33 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["data", "runs", "mlruns"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "S", "N"]
+ignore = [
+  "S101",   # assert is how tests speak
+  "S603", "S607",  # subprocess calls with fixed argv are the harness
+  "E501",   # long lines in docstrings/tables; the formatter handles code
+  "N818",   # PartitionLeak and FenceBreach are named for what they are
+  "UP038",  # deprecated in current ruff; the pinned hook version still emits it
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["S", "N"]
+"scripts/*" = ["S310"]  # urllib with a pinned https URL
+
+[tool.ruff.lint.isort]
+known-first-party = ["hippo", "eval"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src", "."]
+testpaths = ["tests"]
+
+[tool.ruff.format]
+# eval/ is the frozen ruler: its bytes are hash-pinned, so the formatter must never touch it
+exclude = ["eval/*"]

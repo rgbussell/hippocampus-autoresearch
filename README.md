@@ -32,6 +32,14 @@ scratch clone. The GPU seed band (noise floor) is next; no climb has run.
 - The hold-out ids never appear in `results.tsv` or in any run log. A test
   scans for them.
 - `program.md` is the human's steering file. The agent never edits it.
+- Every commit passes the pre-commit hooks in `.pre-commit-config.yaml`:
+  detect-secrets against a committed baseline, private-key detection, a
+  large-file guard (data and weights never enter git), the repo's own
+  hygiene scanner (home paths, cloud URLs, credential assignments, commit
+  messages, and an untracked deny-list of private terms), the partition and
+  fence tests, the hold-out fence, a guard that refuses changes to `eval/`
+  without an explicit re-freeze, and ruff lint plus format. Install once
+  per clone with `scripts/install_hooks.sh`.
 
 ## Data
 

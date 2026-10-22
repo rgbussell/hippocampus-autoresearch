@@ -10,6 +10,7 @@ Checks, and RAISES on failure:
     python scripts/fence.py --freeze   # (re)write manifests/frozen.json from disk;
                                        #  only at W1 or after a logged re-freeze
 """
+
 from __future__ import annotations
 
 import argparse

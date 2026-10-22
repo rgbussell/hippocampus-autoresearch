@@ -9,6 +9,7 @@ The incumbent file holds the best KEPT score for the arm. If it does not
 exist, the incumbent is the baseline seed-band mean. Threshold =
 band["keep_threshold_dice"].
 """
+
 from __future__ import annotations
 
 import argparse
@@ -42,10 +43,20 @@ def main() -> int:
     args = ap.parse_args()
     if args.promote:
         r = json.loads(args.promote.read_text())
-        incumbent_path(args.arm).write_text(json.dumps({
-            "arm": args.arm, "val_dice_mean": r["val_dice_mean"], "commit": r["commit"],
-            "mlflow_run_id": r["mlflow_run_id"], "description": r["description"],
-            "recipe": r["recipe"]}, indent=1) + "\n")
+        incumbent_path(args.arm).write_text(
+            json.dumps(
+                {
+                    "arm": args.arm,
+                    "val_dice_mean": r["val_dice_mean"],
+                    "commit": r["commit"],
+                    "mlflow_run_id": r["mlflow_run_id"],
+                    "description": r["description"],
+                    "recipe": r["recipe"],
+                },
+                indent=1,
+            )
+            + "\n"
+        )
         return 0
     band = json.loads(args.band.read_text())
     thr = float(band["keep_threshold_dice"])

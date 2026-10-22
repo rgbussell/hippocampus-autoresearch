@@ -1,0 +1,71 @@
+# Pre-commit hooks. Install once per clone: scripts/install_hooks.sh
+# (runs `pre-commit install` and `pre-commit install --hook-type pre-push`).
+#
+# Three layers, all of which must pass before a commit:
+#   1. secrets and private content: detect-secrets (entropy + keyword scan
+#      against a committed baseline), private-key detection, the repo's own
+#      hygiene scanner (home paths, cloud URLs, credentials, an untracked
+#      deny-list of private terms, commit messages).
+#   2. the experiment fence: hold-out ids absent from logs, scorer hash pinned.
+#   3. lint and format: ruff.
+minimum_pre_commit_version: "3.0.0"
+default_language_version:
+  python: python3
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: detect-private-key
+      - id: check-added-large-files
+        args: ["--maxkb=2048"]        # data and weights never enter git
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+      - id: end-of-file-fixer
+        exclude: ^eval/   # frozen, read-only, hash-pinned
+      - id: trailing-whitespace
+        exclude: ^eval/   # frozen, read-only, hash-pinned
+      - id: mixed-line-ending
+        exclude: ^eval/   # frozen, read-only, hash-pinned
+
+  - repo: https://github.com/Yelp/detect-secrets
+    rev: v1.5.0
+    hooks:
+      - id: detect-secrets
+        args: ["--baseline", ".secrets.baseline", "--exclude-files", "\\.dvc$|^manifests/.*\\.json$"]
+        # manifests hold sha256 content hashes by design: high entropy, not secrets
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.8
+    hooks:
+      - id: ruff
+        args: ["--fix"]
+      - id: ruff-format
+
+  - repo: local
+    hooks:
+      - id: public-hygiene
+        name: public hygiene (private terms, home paths, cloud URLs, credentials)
+        entry: python3 -m pytest -q tests/test_public_hygiene.py
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: partition-and-fence-tests
+        name: partition and fence tests
+        entry: python3 -m pytest -q tests/test_partition.py tests/test_fence.py
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: holdout-fence
+        name: hold-out fence and scorer hash
+        entry: python3 scripts/fence.py
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: no-eval-edits
+        name: eval/ is frozen (changes need a logged re-freeze)
+        entry: scripts/check_eval_frozen.sh
+        language: script
+        pass_filenames: false
+        always_run: true
