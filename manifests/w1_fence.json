@@ -1,0 +1,11 @@
+{
+ "holdout_ids_in_logs": 0,
+ "scorer_sha256_matches_ledger": true,
+ "scorer_sha256": "137f54ad7a7f2f50010eee35441bbf24a2841b1a556ec7a5ae78a2ff5021ef40",
+ "planted_leak_raised": true,
+ "scanned": [
+  "results.tsv",
+  "runs",
+  "mlruns"
+ ]
+}

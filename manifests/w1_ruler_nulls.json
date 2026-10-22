@@ -1,0 +1,9 @@
+{
+ "n_cases": 39,
+ "identity_mean_dice": 1.0,
+ "empty_mean_dice": 0.0,
+ "swapped_labels_per_class_max": 0.0,
+ "shifted_below_identity": true,
+ "shift_voxels": 2,
+ "note": "identity/empty report the worst case over val; all four must hold on every case"
+}

@@ -12,12 +12,16 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: W0 (scaffold, data, frozen partition). Nothing has been trained yet.
+Status: W1 done (scaffold, data, frozen partition, frozen ruler, fence). Nothing has been trained yet.
 
 ## The fence, stated once
 
-- `eval/` holds the scorer. It is hash-pinned in the program ledger and
-  read-only to the agent. A run whose scorer hash differs is void.
+- `eval/` holds the scorer. It is hash-pinned in `manifests/frozen.json` and in
+  the program ledger, and read-only to the agent. `scripts/fence.py` re-checks
+  the hash and scans every log for hold-out ids before each run; a run whose
+  scorer hash differs is void. The ruler's null suite (`eval/nulls.py`) must
+  pass on the real validation references before the freeze; its output is
+  committed in `manifests/w1_ruler_nulls.json`.
 - `manifests/partition.json` is the split. `hippo.partition.assert_disjoint`
   raises on any overlap, and `tests/test_partition.py` plants a leak to prove
   the fence can fire.

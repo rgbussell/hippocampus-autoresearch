@@ -9,8 +9,10 @@ cat > "$HOOK" <<'HOOK'
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 PY="${HIPPO_PYTHON:-python3}"
-PYTHONPATH=src "$PY" -m pytest -q tests/test_public_hygiene.py tests/test_partition.py >/dev/null \
+PYTHONPATH=src "$PY" -m pytest -q tests/test_public_hygiene.py tests/test_partition.py tests/test_fence.py >/dev/null \
   || { echo "pre-commit: hygiene or fence test failed; run: PYTHONPATH=src pytest -q tests" >&2; exit 1; }
+"$PY" scripts/fence.py >/dev/null \
+  || { echo "pre-commit: the hold-out fence or the scorer hash check failed" >&2; exit 1; }
 HOOK
 chmod +x "$HOOK"
 echo "installed $HOOK"
