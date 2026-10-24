@@ -30,3 +30,5 @@ exp	arm	commit	seed	val_dice_mean	val_dice_ant	val_dice_post	train_seconds	steps
 29	baseline	e1e6676	2027	0.8751506506777252	0.8879641779469852	0.8623371234084652	600.0	142733	plain baseline 600s fresh pair 4	baseline	37ce21633ac948168c9f21f68c8a6ee6
 30	agent	d34589c	1337	0.879749670287419	0.8919349464532422	0.8675643941215956	600.0	93834	aug_flip off -> on: 600 s overtrains the flat-LR baseline (0.875 vs 0.878 at 300 s), mirroring regularises and was the best dry-run edit (+0.006 on seed 1337)	kept	7df6e27c77264dcb94338306742d81fd
 31	agent	d34589c	2027	0.880186837390436	0.8920774873643293	0.8682961874165424	600.0	77388	aug_flip off -> on: 600 s overtrains the flat-LR baseline (0.875 vs 0.878 at 300 s), mirroring regularises and was the best dry-run edit (+0.006 on seed 1337)	pair	2e3697544220485ca66f431b86f1ee90
+32	random	82c1457	1337	0.8772694553930587	0.8907515610477913	0.8637873497383256	600.0	83021	random: momentum 0.99 -> 0.9	reverted	164fcc9458a247c59009af3f0c6dac13
+33	random	82c1457	2027	0.876595770812716	0.8884279013147602	0.8647636403106719	600.0	80617	random: momentum 0.99 -> 0.9	pair	b6ecd58dc7534d578fa3bbf597500275
