@@ -51,7 +51,7 @@ def append_row(path: Path, row: dict) -> int:
         raise ValueError(f"row missing columns {missing}")
     new = not path.exists() or path.stat().st_size == 0
     with open(path, "a", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=COLUMNS, delimiter="\t", extrasaction="ignore")
+        w = csv.DictWriter(f, fieldnames=COLUMNS, delimiter="\t", extrasaction="ignore", lineterminator="\n")
         if new:
             w.writeheader()
         w.writerow(row)

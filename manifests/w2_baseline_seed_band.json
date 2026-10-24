@@ -1,0 +1,88 @@
+{
+ "n_seeds": 3,
+ "scores": [
+  0.8777434057040288,
+  0.877525666072583,
+  0.8776947325189329
+ ],
+ "mean": 0.8776546014318483,
+ "min": 0.877525666072583,
+ "max": 0.8777434057040288,
+ "half_width_dice": 0.00010886981572288956,
+ "stdev": 0.00011428260973781742,
+ "recipe": {
+  "normalization": "minmax",
+  "patch": [
+   32,
+   32,
+   32
+  ],
+  "fg_oversample": 0.0,
+  "loss": "ce",
+  "class_weights": null,
+  "optimizer": "adam",
+  "lr": 0.001,
+  "momentum": 0.99,
+  "weight_decay": 0.0,
+  "schedule": "flat",
+  "aug_flip": false,
+  "aug_rot90": false,
+  "aug_scale_intensity": 0.0,
+  "aug_gaussian_noise": 0.0,
+  "aug_affine": false,
+  "channels": [
+   16,
+   32,
+   64
+  ],
+  "strides": [
+   2,
+   2
+  ],
+  "num_res_units": 0,
+  "norm": "batch",
+  "deep_supervision": false,
+  "dropout": 0.0,
+  "batch_size": 2
+ },
+ "budget_s": 300.0,
+ "device": "cuda",
+ "seeds": [
+  1337,
+  2027,
+  3117
+ ],
+ "runs": [
+  {
+   "seed": 1337,
+   "val_dice_mean": 0.8777434057040288,
+   "steps": 68706,
+   "mlflow_run_id": "c8297fbca77c4bab940eedfafccbe494",
+   "exp": 1
+  },
+  {
+   "seed": 2027,
+   "val_dice_mean": 0.877525666072583,
+   "steps": 69158,
+   "mlflow_run_id": "c38f7a74fdbb4606bfcb0518ce75b393",
+   "exp": 2
+  },
+  {
+   "seed": 3117,
+   "val_dice_mean": 0.8776947325189329,
+   "steps": 68927,
+   "mlflow_run_id": "2a2f8839b9dd4caea9ab236f8e7f384c",
+   "exp": 3
+  }
+ ],
+ "rerun_same_seed": {
+  "val_dice_mean": 0.8783744082018927,
+  "steps": 69746,
+  "mlflow_run_id": "1c31bea20a5a4922b122a93cfe187867",
+  "exp": 4
+ },
+ "rerun_same_seed_delta": 0.0006310024978639639,
+ "rerun_same_seed_kept": true,
+ "keep_threshold_dice": 0.0006310024978639639,
+ "keep_threshold_note": "raised to the same-seed rerun delta, which exceeded the half-width"
+}
