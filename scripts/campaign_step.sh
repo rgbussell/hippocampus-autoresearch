@@ -16,6 +16,8 @@ export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 scripts/climb_step.sh "$1"
 "$HIPPO_PYTHON" scripts/random_climber.py --n 1 --band "$HIPPO_BAND"
 N="$(awk -F'\t' '$2=="random" && ($11=="kept"||$11=="reverted"||$11=="refused")' results.tsv | wc -l)"
-git add results.tsv manifests/incumbent_random.json 2>/dev/null || git add results.tsv
+"$HIPPO_PYTHON" scripts/report.py || true
+git add results.tsv docs/report.html
+git add manifests/incumbent_random.json 2>/dev/null || true
 git commit -q -m "random-edit step $N" || true
 echo "CAMPAIGN STEP DONE"

@@ -24,7 +24,9 @@ campaign run: at least 0.89 two-seed validation Dice within 25 experiments
 per arm, with at least three kept edits mapping to named nnU-Net
 components. See [docs/METHOD.md](docs/METHOD.md) sections 6 and 8, and
 [docs/AUTORESEARCH.md](docs/AUTORESEARCH.md) for what autoresearch is and
-when to use it.
+when to use it. The campaign report with charts, metrics and the full
+experiment table is regenerated after every step:
+[docs/report.html](docs/report.html) (open locally).
 
 ## The fence, stated once
 
@@ -78,6 +80,7 @@ One experiment (`[train]` extra: torch, MONAI, MLflow):
 pip install -e ".[train]"
 python train.py --seed 1337 --budget 300 --desc "plain baseline" --verdict baseline
 python scripts/show_curves.py --latest 1          # training curve from MLflow
+python scripts/report.py                           # docs/report.html: charts, metrics, narrative, every row
 python scripts/seed_band.py --budget 600 --calibration-pairs 3   # noise floor of two-seed means, out-of-sample check
 ```
 
