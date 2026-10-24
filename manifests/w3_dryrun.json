@@ -1,0 +1,156 @@
+{
+ "agent_experiments": 5,
+ "random_experiments": 5,
+ "verdicts": {
+  "agent": {
+   "confirm": 2,
+   "reverted": 5
+  },
+  "random": {
+   "confirm": 2,
+   "reverted": 5
+  }
+ },
+ "rows": [
+  {
+   "exp": "8",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8768136298895922",
+   "steps": "66378",
+   "description": "loss ce -> dice_ce (nnU-Net compound loss)",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "9",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "2027",
+   "val_dice_mean": "0.8699987382260946",
+   "steps": "71270",
+   "description": "normalization minmax -> zscore (nnU-Net MR normalization) (confirm seed)",
+   "verdict": "confirm"
+  },
+  {
+   "exp": "10",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8783076856182489",
+   "steps": "71285",
+   "description": "normalization minmax -> zscore (nnU-Net MR normalization)",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "11",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8758774887619989",
+   "steps": "70532",
+   "description": "fg_oversample 0 -> 0.33 (nnU-Net foreground oversampling)",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "12",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "2027",
+   "val_dice_mean": "0.8768818450299468",
+   "steps": "31796",
+   "description": "aug_flip off -> on (mirroring augmentation) (confirm seed)",
+   "verdict": "confirm"
+  },
+  {
+   "exp": "13",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.884071288640884",
+   "steps": "37285",
+   "description": "aug_flip off -> on (mirroring augmentation)",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "14",
+   "arm": "agent",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.876824238934002",
+   "steps": "40747",
+   "description": "schedule flat -> poly (nnU-Net poly LR decay)",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "15",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "2027",
+   "val_dice_mean": "0.8796860083636283",
+   "steps": "39592",
+   "description": "random: normalization 'minmax' -> 'percentile_clip' (confirm seed)",
+   "verdict": "confirm"
+  },
+  {
+   "exp": "16",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8792230264666401",
+   "steps": "39844",
+   "description": "random: normalization 'minmax' -> 'percentile_clip'",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "17",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "2027",
+   "val_dice_mean": "0.8788164166997487",
+   "steps": "39954",
+   "description": "random: lr 0.001 -> 0.000361 (confirm seed)",
+   "verdict": "confirm"
+  },
+  {
+   "exp": "18",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8785820377431611",
+   "steps": "40695",
+   "description": "random: lr 0.001 -> 0.000361",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "19",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8749756911000218",
+   "steps": "26042",
+   "description": "random: channels [16, 32, 64] -> [32, 64, 128]",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "20",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.8768012744879815",
+   "steps": "40790",
+   "description": "random: schedule 'flat' -> 'cosine'",
+   "verdict": "reverted"
+  },
+  {
+   "exp": "21",
+   "arm": "random",
+   "commit": "cf91863",
+   "seed": "1337",
+   "val_dice_mean": "0.875666104124721",
+   "steps": "40426",
+   "description": "random: fg_oversample 0.0 -> 0.303032",
+   "verdict": "reverted"
+  }
+ ]
+}

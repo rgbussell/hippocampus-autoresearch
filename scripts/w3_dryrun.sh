@@ -11,6 +11,7 @@ export HIPPO_PYTHON="${HIPPO_PYTHON:-python3}"
 export HIPPO_BUDGET="${HIPPO_BUDGET:-300}"
 export HIPPO_DEVICE="${HIPPO_DEVICE:-cuda}"
 PY="$HIPPO_PYTHON"
+export PATH="$(dirname "$(command -v "$PY")"):$PATH"   # hooks call python3; see climb_step.sh
 
 set_knob() {  # set_knob <key> <python literal>   (edits RECIPE in recipe.py, the agent's one file)
   "$PY" - "$1" "$2" <<'PYEOF'

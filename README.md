@@ -12,14 +12,16 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: noise floor measured, no climb yet. Scaffold, data, frozen
-partition, frozen ruler, fence, budgeted trainer, recipe seam, MLflow
-tracking, keep rule, agent climb step, random-edit climber and pre-commit
-hooks are done. W2 (seven GPU baseline runs) put the plain baseline at
-0.878 mean Dice and the keep threshold at 0.011 Dice: the first-pass gate
-failed its own degeneracy check and was replaced by an out-of-sample one
-(see [docs/METHOD.md](docs/METHOD.md), section 6). The W3 GPU dry run of the
-agent and random arms is next.
+Status: harness proven on the GPU, campaign not started. W2 (seven GPU
+baseline runs) put the plain baseline at 0.878 mean Dice and the keep
+threshold at 0.011 Dice: the first-pass gate failed its own degeneracy check
+and was replaced by an out-of-sample one (see
+[docs/METHOD.md](docs/METHOD.md), section 6). W3 ran the dry run: five
+scripted agent edits (Dice+CE loss, z-score normalization, foreground
+oversampling, mirroring, poly schedule) through the real climb step and five
+random-edit steps, rows 8 to 21 of `results.tsv`. No single-knob edit
+cleared the gate; four went to a confirm seed and fell back. The campaign
+(W4) is pre-registered next, and its budget is the open question.
 
 ## The fence, stated once
 

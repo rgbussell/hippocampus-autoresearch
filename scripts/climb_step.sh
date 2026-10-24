@@ -13,6 +13,9 @@ cd "$(git rev-parse --show-toplevel)"
 export PYTHONPATH="$PWD/src${PYTHONPATH:+:$PYTHONPATH}"
 DESC="${1:?one-line description required}"
 PY="${HIPPO_PYTHON:-python3}"
+# the pre-commit hooks call python3: make it the training interpreter, so the
+# per-step commits also work under systemd (run-compute), where PATH is bare
+export PATH="$(dirname "$(command -v "$PY")"):$PATH"
 BUDGET="${HIPPO_BUDGET:-300}"
 DEVICE="${HIPPO_DEVICE:-cuda}"
 ARM="${HIPPO_ARM:-agent}"
