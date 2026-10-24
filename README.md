@@ -2,8 +2,8 @@
 
 **Can a coding agent rediscover nnU-Net?**
 
-A deliberately plain 3-D U-Net starts near 0.80 Dice on MSD Task04
-Hippocampus. An agent edits one file, `recipe.py`, under a fixed 5-minute
+A deliberately plain 3-D U-Net starts at 0.878 mean Dice on MSD Task04
+Hippocampus after 300 s on one GPU. An agent edits one file, `recipe.py`, under a fixed 5-minute
 training budget. A frozen ruler scores Dice on a frozen validation split.
 Git keeps the change if the score beats the incumbent by more than the
 measured noise floor, else reverts it. A random-edit climber runs alongside
@@ -12,11 +12,14 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: harness complete, no GPU results yet. Scaffold, data, frozen
-partition, frozen ruler and fence are done; the budgeted trainer, the
-recipe seam, MLflow tracking, the keep rule, the agent climb step and the
-random-edit climber are in place and dry-run end to end on CPU in a
-scratch clone. The GPU seed band (noise floor) is next; no climb has run.
+Status: noise floor measured, no climb yet. Scaffold, data, frozen
+partition, frozen ruler, fence, budgeted trainer, recipe seam, MLflow
+tracking, keep rule, agent climb step, random-edit climber and pre-commit
+hooks are done. W2 (seven GPU baseline runs) put the plain baseline at
+0.878 mean Dice and the keep threshold at 0.011 Dice: the first-pass gate
+failed its own degeneracy check and was replaced by an out-of-sample one
+(see [docs/METHOD.md](docs/METHOD.md), section 6). The W3 GPU dry run of the
+agent and random arms is next.
 
 ## The fence, stated once
 
@@ -70,7 +73,7 @@ One experiment (`[train]` extra: torch, MONAI, MLflow):
 pip install -e ".[train]"
 python train.py --seed 1337 --budget 300 --desc "plain baseline" --verdict baseline
 python scripts/show_curves.py --latest 1          # training curve from MLflow
-python scripts/seed_band.py --budget 300          # W2: noise floor + degeneracy check
+python scripts/seed_band.py --budget 300          # W2: noise floor, keep threshold, out-of-sample degeneracy check
 ```
 
 The climb, once the noise floor exists:

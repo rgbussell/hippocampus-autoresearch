@@ -10,6 +10,7 @@
  "max": 0.8777434057040288,
  "half_width_dice": 0.00010886981572288956,
  "stdev": 0.00011428260973781742,
+ "protocol": "v2: threshold = max(half_width, margin x largest pairwise same-seed delta); degeneracy checked out of sample with a fresh same-seed rerun",
  "recipe": {
   "normalization": "minmax",
   "patch": [
@@ -75,14 +76,48 @@
    "exp": 3
   }
  ],
- "rerun_same_seed": {
-  "val_dice_mean": 0.8783744082018927,
-  "steps": 69746,
-  "mlflow_run_id": "1c31bea20a5a4922b122a93cfe187867",
-  "exp": 4
+ "calibration_reruns": [
+  {
+   "val_dice_mean": 0.8783744082018927,
+   "steps": 69746,
+   "mlflow_run_id": "1c31bea20a5a4922b122a93cfe187867",
+   "exp": 4
+  },
+  {
+   "seed": 1337,
+   "val_dice_mean": 0.8750763477592444,
+   "steps": 70769,
+   "mlflow_run_id": "6d0ab05a82584f5f92423f16032a7509",
+   "exp": 5
+  },
+  {
+   "seed": 1337,
+   "val_dice_mean": 0.8728773420497931,
+   "steps": 71346,
+   "mlflow_run_id": "50f8811fb4c54309a5583975bf8b19ee",
+   "exp": 6
+  }
+ ],
+ "n_calibration_same_seed_reruns": 3,
+ "same_seed_scores": [
+  0.8777434057040288,
+  0.8783744082018927,
+  0.8750763477592444,
+  0.8728773420497931
+ ],
+ "max_pairwise_same_seed_delta": 0.005497066152099661,
+ "margin": 2.0,
+ "keep_threshold_dice": 0.010994132304199322,
+ "keep_threshold_note": "2 x the largest pairwise same-seed delta (exceeds the half-width)",
+ "fresh_rerun": {
+  "seed": 1337,
+  "val_dice_mean": 0.8765686368815634,
+  "steps": 71535,
+  "mlflow_run_id": "61bb73b80b6c437498af952929d1b4bf",
+  "exp": 7
  },
- "rerun_same_seed_delta": 0.0006310024978639639,
- "rerun_same_seed_kept": true,
- "keep_threshold_dice": 0.0006310024978639639,
- "keep_threshold_note": "raised to the same-seed rerun delta, which exceeded the half-width"
+ "fresh_rerun_delta": -0.0011747688224653663,
+ "fresh_rerun_kept": false,
+ "rerun_same_seed_kept": false,
+ "fresh_rerun_kept_under_half_width": false
 }

@@ -38,9 +38,12 @@ Do not try to read, score, or reason about the hold-out split.
 
 A change is kept only if its validation score beats the incumbent by more
 than the measured noise floor (`manifests/w2_baseline_seed_band.json`,
-`keep_threshold_dice`). Gains inside twice the floor trigger a second seed
-and are kept only if the two-seed mean clears the floor. Everything else is
-reverted. Ties are reverted.
+`keep_threshold_dice`: 0.011 Dice at the 300 s budget, set as twice the
+largest same-seed scatter of the baseline and checked out of sample). Gains
+inside twice the floor trigger a second seed and are kept only if the
+two-seed mean clears the floor. Everything else is reverted. Ties are
+reverted. The floor is wide relative to the headroom on this task; that is
+the measurement, not a setting you may change.
 
 ## Budget
 

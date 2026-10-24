@@ -122,18 +122,46 @@ run id so a kept change can be inspected, not just trusted.
 
 An autoresearch loop that keeps every positive delta is a random walk with a
 ratchet whenever the delta is smaller than run-to-run noise. So the noise
-floor is measured first: the plain baseline is trained with three seeds and
-the half-width of the resulting Dice range is recorded in
-`manifests/w2_baseline_seed_band.json`.
+floor is measured first, and the measurement is itself tested.
+
+**First pass (EXP-005, falsified).** The plain baseline trained with three
+seeds landed at 0.8777, 0.8775 and 0.8777 mean Dice: a cross-seed
+half-width of 0.0001. A fourth run with the *same* seed as the first scored
+0.8784, a delta of 0.0006, six times the half-width. Under the preregistered
+gate (keep if gain > half-width) the unchanged recipe would have been kept.
+A wall-clock budget on a GPU is not deterministic: step counts drift with
+whatever else shares the card (68.7k to 71.5k steps in 300 s across the
+seven baseline runs) and cuDNN kernels are not bitwise reproducible, so the
+training trajectory of one seed scatters more than three seeds happened to.
+Three seeds agreeing to 0.0002 was luck, not a floor. The obvious patch,
+raising the threshold to the one delta just observed, is not a fix either: a
+threshold set equal to the single sample it is checked against passes by
+construction.
+
+**Protocol v2 (EXP-006).** The same seed is rerun three more times for
+calibration; four same-seed runs scored 0.8777, 0.8784, 0.8751 and 0.8729,
+a largest pairwise delta of 0.0055. The keep threshold is
+`max(cross-seed half-width, 2 x largest pairwise same-seed delta)`, here
+0.011 Dice. Then one *fresh* same-seed rerun that took no part in setting the
+threshold is scored: 0.8766, a delta of -0.0012 from the first run, not
+kept. That out-of-sample check is the degeneracy test; `scripts/seed_band.py`
+exits non-zero and the campaign does not start if it fails. All numbers are
+in `manifests/w2_baseline_seed_band.json`; the seven runs are rows 1 to 7 of
+`results.tsv` and MLflow runs.
 
 The keep rule is then: keep the change if `val_dice_mean` exceeds the
-incumbent's by more than the half-width; if the gain is positive but within
-twice the half-width, run a second seed and keep only if the mean of both
-seeds clears the threshold; otherwise `git checkout recipe.py`.
+incumbent's by more than the threshold; if the gain is positive but within
+twice the threshold, run a second seed and keep only if the mean of both
+seeds clears the threshold; otherwise `git checkout recipe.py`. The
+incumbent an arm starts from is the seed-band mean, not the luckiest single
+run.
 
-The rule has a degeneracy check: re-running the incumbent recipe with the
-same seed must not be kept. If it is, the rule is measuring noise and the
-campaign is void.
+The consequence is stated plainly: at a 300 s budget the gate is 0.011
+Dice wide, and the plain baseline already sits at 0.878 against roughly
+0.89 to 0.90 for nnU-Net-class recipes on this task. Single-knob edits
+smaller than the gate will be reverted even when real. A campaign that
+wants finer resolution must buy it with a longer budget or more seeds per
+experiment, and must say so in the ledger before it starts.
 
 ## 7. The null arms
 

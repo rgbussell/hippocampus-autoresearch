@@ -7,7 +7,16 @@ import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from hippo.ledger import COLUMNS, append_row, keep_decision, next_exp, read_rows, seed_band  # noqa: E402
+from hippo.ledger import (  # noqa: E402
+    COLUMNS,
+    append_row,
+    keep_decision,
+    keep_threshold,
+    next_exp,
+    pairwise_max_delta,
+    read_rows,
+    seed_band,
+)
 
 
 def test_seed_band_half_width():
@@ -22,6 +31,16 @@ def test_keep_rule_thresholds():
     assert keep_decision(0.81, 0.81, hw) == "reverted"  # tie
     assert keep_decision(0.80, 0.81, hw) == "reverted"  # worse
     assert keep_decision(0.8101, 0.81, hw) == "confirm"  # tiny positive gain asks for a second seed
+
+
+def test_keep_threshold_sits_above_same_seed_scatter():
+    # EXP-005: half-width 0.0001 but same-seed scatter 0.0006 -> the gate must clear the scatter with margin
+    thr = keep_threshold(0.0001, [0.0006, -0.0004])
+    assert abs(thr - 0.0012) < 1e-12
+    assert keep_decision(0.8783, 0.8777, thr) != "kept"  # the observed rerun is no longer a keep
+    assert keep_threshold(0.01, [0.001]) == 0.01  # wide seed band dominates
+    assert keep_threshold(0.0, []) == 0.0
+    assert abs(pairwise_max_delta([0.8777, 0.8784, 0.8775]) - 0.0009) < 1e-12
 
 
 def test_unchanged_recipe_is_not_kept():

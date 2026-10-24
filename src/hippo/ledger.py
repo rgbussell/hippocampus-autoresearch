@@ -76,6 +76,24 @@ def seed_band(scores: list[float]) -> dict:
     }
 
 
+def keep_threshold(half_width: float, same_seed_deltas: list[float], margin: float = 2.0) -> float:
+    """The keep threshold of INS-2 (protocol v2, EXP-005/006).
+
+    max(cross-seed half-width, margin x the largest same-seed |delta|). A
+    wall-clock budget on a GPU is not deterministic, so the same recipe and
+    seed scatter; the margin keeps the gate above that scatter instead of
+    exactly at the one value it was measured from. The threshold is then
+    checked OUT OF SAMPLE with a fresh same-seed rerun that took no part in
+    setting it (seed_band.py).
+    """
+    worst = max([abs(d) for d in same_seed_deltas], default=0.0)
+    return float(max(half_width, margin * worst))
+
+
+def pairwise_max_delta(scores: list[float]) -> float:
+    return float(max((abs(a - b) for i, a in enumerate(scores) for b in scores[i + 1 :]), default=0.0))
+
+
 def keep_decision(candidate: float, incumbent: float, half_width: float) -> str:
     """kept | confirm | reverted. The gate of INS-2.
 
