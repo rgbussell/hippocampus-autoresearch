@@ -12,15 +12,17 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: campaign pre-registered, waiting for the GPU. W2 put the plain
-baseline at 0.878 mean Dice with a 0.011 gate at 300 s; W3's dry run of five
-agent and five random edits all reverted under it (rows 8 to 21 of
-`results.tsv`). The campaign protocol therefore moved to two seeds per
-experiment at 600 s per seed, with the noise floor re-measured on two-seed
-means and a written rule for moving to 900 s. Claim: at least 0.89 two-seed
-validation Dice within 25 experiments per arm, with at least three kept
-edits mapping to named nnU-Net components. See
-[docs/METHOD.md](docs/METHOD.md) sections 6 and 8, and
+Status: campaign 1 running. The 600 s two-seed noise floor is measured
+(`manifests/w4_baseline_seed_band.json`): the plain baseline scores 0.8753
+mean Dice as the mean of two seeds, the keep threshold is 0.0022, and the
+out-of-sample fresh pair was correctly not kept (delta +0.0002). W2 had put
+the single-seed baseline at 0.878 with a 0.011 gate at 300 s; W3's dry run
+of five agent and five random edits all reverted under it (rows 8 to 21 of
+`results.tsv`). The campaign therefore uses two seeds per experiment at
+600 s per seed, scored on the mean. Claim, pre-registered before the first
+campaign run: at least 0.89 two-seed validation Dice within 25 experiments
+per arm, with at least three kept edits mapping to named nnU-Net
+components. See [docs/METHOD.md](docs/METHOD.md) sections 6 and 8, and
 [docs/AUTORESEARCH.md](docs/AUTORESEARCH.md) for what autoresearch is and
 when to use it.
 

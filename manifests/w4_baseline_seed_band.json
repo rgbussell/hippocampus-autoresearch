@@ -1,0 +1,158 @@
+{
+ "protocol": "v3: two-seed means; threshold = max(half-width of calibration pair means, margin x largest pairwise delta); degeneracy checked out of sample with a fresh pair",
+ "recipe": {
+  "normalization": "minmax",
+  "patch": [
+   32,
+   32,
+   32
+  ],
+  "fg_oversample": 0.0,
+  "loss": "ce",
+  "class_weights": null,
+  "optimizer": "adam",
+  "lr": 0.001,
+  "momentum": 0.99,
+  "weight_decay": 0.0,
+  "schedule": "flat",
+  "aug_flip": false,
+  "aug_rot90": false,
+  "aug_scale_intensity": 0.0,
+  "aug_gaussian_noise": 0.0,
+  "aug_affine": false,
+  "channels": [
+   16,
+   32,
+   64
+  ],
+  "strides": [
+   2,
+   2
+  ],
+  "num_res_units": 0,
+  "norm": "batch",
+  "deep_supervision": false,
+  "dropout": 0.0,
+  "batch_size": 2
+ },
+ "budget_s": 600.0,
+ "device": "cuda",
+ "seeds": [
+  1337,
+  2027
+ ],
+ "seeds_per_experiment": 2,
+ "n_calibration_pairs": 3,
+ "calibration_pairs": [
+  {
+   "pair": 1,
+   "kind": "calibration",
+   "runs": [
+    {
+     "seed": 1337,
+     "val_dice_mean": 0.87533940737171,
+     "steps": 150264,
+     "mlflow_run_id": "82515301e9e44103ada4adac36bf836d",
+     "exp": 22
+    },
+    {
+     "seed": 2027,
+     "val_dice_mean": 0.8742704280016786,
+     "steps": 146374,
+     "mlflow_run_id": "a3bb00d117b74f72b9ed7b8c06ef4242",
+     "exp": 23
+    }
+   ],
+   "mean": 0.8748049176866943
+  },
+  {
+   "pair": 2,
+   "kind": "calibration",
+   "runs": [
+    {
+     "seed": 1337,
+     "val_dice_mean": 0.8759870548139792,
+     "steps": 146121,
+     "mlflow_run_id": "d3d67810072447608f9d5cdf5458c493",
+     "exp": 24
+    },
+    {
+     "seed": 2027,
+     "val_dice_mean": 0.8742306993781528,
+     "steps": 143960,
+     "mlflow_run_id": "badae89c681d452cb97c4a25b60cb74c",
+     "exp": 25
+    }
+   ],
+   "mean": 0.875108877096066
+  },
+  {
+   "pair": 3,
+   "kind": "calibration",
+   "runs": [
+    {
+     "seed": 1337,
+     "val_dice_mean": 0.8766817355992469,
+     "steps": 147425,
+     "mlflow_run_id": "7ce4f1c7d29e47a3aa79610bbcdc19d1",
+     "exp": 26
+    },
+    {
+     "seed": 2027,
+     "val_dice_mean": 0.8751368355362138,
+     "steps": 148845,
+     "mlflow_run_id": "aa318dd75c054a92ba9da2dfcb1a5c68",
+     "exp": 27
+    }
+   ],
+   "mean": 0.8759092855677304
+  }
+ ],
+ "pair_means": [
+  0.8748049176866943,
+  0.875108877096066,
+  0.8759092855677304
+ ],
+ "mean": 0.8752743601168302,
+ "min": 0.8748049176866943,
+ "max": 0.8759092855677304,
+ "half_width_dice": 0.0005521839405180362,
+ "stdev": 0.0005704783753894366,
+ "single_run_scores": [
+  0.87533940737171,
+  0.8742704280016786,
+  0.8759870548139792,
+  0.8742306993781528,
+  0.8766817355992469,
+  0.8751368355362138
+ ],
+ "max_pairwise_pair_delta": 0.0011043678810360724,
+ "margin": 2.0,
+ "keep_threshold_dice": 0.002208735762072145,
+ "gate_target": 0.005,
+ "gate_ok": true,
+ "fresh_pair": {
+  "pair": 4,
+  "kind": "fresh",
+  "runs": [
+   {
+    "seed": 1337,
+    "val_dice_mean": 0.8757675661937108,
+    "steps": 142657,
+    "mlflow_run_id": "94b6d2039c7c4c4189d6a7b31bd17af5",
+    "exp": 28
+   },
+   {
+    "seed": 2027,
+    "val_dice_mean": 0.8751506506777252,
+    "steps": 142733,
+    "mlflow_run_id": "37ce21633ac948168c9f21f68c8a6ee6",
+    "exp": 29
+   }
+  ],
+  "mean": 0.875459108435718
+ },
+ "fresh_pair_delta": 0.00018474831888770638,
+ "fresh_pair_kept": false,
+ "rerun_same_seed_kept": false
+}
