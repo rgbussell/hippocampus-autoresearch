@@ -38,7 +38,7 @@ RECIPE = {
     "weight_decay": 0.0,
     "schedule": "flat",  # flat | poly | cosine
     # augmentation (applied to the training patch)
-    "aug_flip": False,
+    "aug_flip": True,
     "aug_rot90": False,
     "aug_scale_intensity": 0.0,  # +/- fraction, 0 = off
     "aug_gaussian_noise": 0.0,  # std, 0 = off

@@ -1,0 +1,62 @@
+{
+ "arm": "agent",
+ "val_dice_mean": 0.8799682538389275,
+ "seeds": [
+  1337,
+  2027
+ ],
+ "runs": [
+  {
+   "seed": 1337,
+   "val_dice_mean": 0.879749670287419,
+   "commit": "d34589c",
+   "mlflow_run_id": "7df6e27c77264dcb94338306742d81fd",
+   "steps": 93834
+  },
+  {
+   "seed": 2027,
+   "val_dice_mean": 0.880186837390436,
+   "commit": "d34589c",
+   "mlflow_run_id": "2e3697544220485ca66f431b86f1ee90",
+   "steps": 77388
+  }
+ ],
+ "commit": "d34589c",
+ "mlflow_run_id": "7df6e27c77264dcb94338306742d81fd",
+ "description": "aug_flip off -> on: 600 s overtrains the flat-LR baseline (0.875 vs 0.878 at 300 s), mirroring regularises and was the best dry-run edit (+0.006 on seed 1337)",
+ "recipe": {
+  "normalization": "minmax",
+  "patch": [
+   32,
+   32,
+   32
+  ],
+  "fg_oversample": 0.0,
+  "loss": "ce",
+  "class_weights": null,
+  "optimizer": "adam",
+  "lr": 0.001,
+  "momentum": 0.99,
+  "weight_decay": 0.0,
+  "schedule": "flat",
+  "aug_flip": true,
+  "aug_rot90": false,
+  "aug_scale_intensity": 0.0,
+  "aug_gaussian_noise": 0.0,
+  "aug_affine": false,
+  "channels": [
+   16,
+   32,
+   64
+  ],
+  "strides": [
+   2,
+   2
+  ],
+  "num_res_units": 0,
+  "norm": "batch",
+  "deep_supervision": false,
+  "dropout": 0.0,
+  "batch_size": 2
+ }
+}
