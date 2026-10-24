@@ -3,8 +3,8 @@
 **Can a coding agent rediscover nnU-Net?**
 
 A deliberately plain 3-D U-Net starts at 0.878 mean Dice on MSD Task04
-Hippocampus after 300 s on one GPU. An agent edits one file, `recipe.py`, under a fixed 5-minute
-training budget. A frozen ruler scores Dice on a frozen validation split.
+Hippocampus after 300 s on one GPU. An agent edits one file, `recipe.py`, under a fixed training budget (two
+seeds of 10 minutes each in the campaign). A frozen ruler scores Dice on a frozen validation split.
 Git keeps the change if the score beats the incumbent by more than the
 measured noise floor, else reverts it. A random-edit climber runs alongside
 with the same budget and the same keep rule. A 39-case hold-out is scored
@@ -12,16 +12,17 @@ once, by a person, at the end of the campaign. The write-up maps every kept
 edit onto the nnU-Net recipe component it rediscovered, and lists the ones
 it never found.
 
-Status: harness proven on the GPU, campaign not started. W2 (seven GPU
-baseline runs) put the plain baseline at 0.878 mean Dice and the keep
-threshold at 0.011 Dice: the first-pass gate failed its own degeneracy check
-and was replaced by an out-of-sample one (see
-[docs/METHOD.md](docs/METHOD.md), section 6). W3 ran the dry run: five
-scripted agent edits (Dice+CE loss, z-score normalization, foreground
-oversampling, mirroring, poly schedule) through the real climb step and five
-random-edit steps, rows 8 to 21 of `results.tsv`. No single-knob edit
-cleared the gate; four went to a confirm seed and fell back. The campaign
-(W4) is pre-registered next, and its budget is the open question.
+Status: campaign pre-registered, waiting for the GPU. W2 put the plain
+baseline at 0.878 mean Dice with a 0.011 gate at 300 s; W3's dry run of five
+agent and five random edits all reverted under it (rows 8 to 21 of
+`results.tsv`). The campaign protocol therefore moved to two seeds per
+experiment at 600 s per seed, with the noise floor re-measured on two-seed
+means and a written rule for moving to 900 s. Claim: at least 0.89 two-seed
+validation Dice within 25 experiments per arm, with at least three kept
+edits mapping to named nnU-Net components. See
+[docs/METHOD.md](docs/METHOD.md) sections 6 and 8, and
+[docs/AUTORESEARCH.md](docs/AUTORESEARCH.md) for what autoresearch is and
+when to use it.
 
 ## The fence, stated once
 
@@ -75,16 +76,17 @@ One experiment (`[train]` extra: torch, MONAI, MLflow):
 pip install -e ".[train]"
 python train.py --seed 1337 --budget 300 --desc "plain baseline" --verdict baseline
 python scripts/show_curves.py --latest 1          # training curve from MLflow
-python scripts/seed_band.py --budget 300          # W2: noise floor, keep threshold, out-of-sample degeneracy check
+python scripts/seed_band.py --budget 600 --calibration-pairs 3   # noise floor of two-seed means, out-of-sample check
 ```
 
 The climb, once the noise floor exists:
 
 ```bash
-# agent arm: edit recipe.py, then
-scripts/climb_step.sh "one-line description of the change"   # trains, scores, keeps or reverts
-# random-edit null arm, same budget and keep rule, never touches recipe.py
-python scripts/random_climber.py --n 50 --budget 300
+# the agent edits recipe.py, then one campaign iteration: agent experiment + random-edit control
+scripts/campaign_step.sh "one-line description of the change"
+# the pieces, separately
+scripts/climb_step.sh "one-line description"           # two seeds, keep or revert
+python scripts/random_climber.py --n 1                 # one random-edit experiment, never touches recipe.py
 ```
 
 `program.md` is the agent's standing instruction and is edited only by a

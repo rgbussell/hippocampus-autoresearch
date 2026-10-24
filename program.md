@@ -24,10 +24,11 @@ space is refused and logged as `refused`; that costs you an experiment.
 2. Decide one change. One idea per experiment. Say what you expect and why
    in the description, in one line.
 3. Edit `recipe.py`.
-4. Run `scripts/climb_step.sh "<one-line description>"`. It trains for the
-   fixed budget, scores, decides, records, and either commits `recipe.py`
-   (kept) or restores it (reverted). It may ask for a second seed
-   (`confirm`); it runs that itself.
+4. Run `scripts/campaign_step.sh "<one-line description>"`. It trains your
+   recipe with both seeds for the fixed budget, scores the mean, decides,
+   records one row per seed, and either commits `recipe.py` (kept) or
+   restores it (reverted). It then runs one random-edit experiment for the
+   control arm; those rows are not yours to read.
 5. Read the printed verdict. Then go to step 1.
 
 Do not ask for permission between experiments. Do not stop to summarize.
@@ -36,30 +37,20 @@ Do not try to read, score, or reason about the hold-out split.
 
 ## The keep rule
 
-A change is kept only if its validation score beats the incumbent by more
-than the measured noise floor (`manifests/w2_baseline_seed_band.json`,
-`keep_threshold_dice`: 0.011 Dice at the 300 s budget, set as twice the
-largest same-seed scatter of the baseline and checked out of sample). Gains
-inside twice the floor trigger a second seed and are kept only if the
-two-seed mean clears the floor. Everything else is reverted. Ties are
-reverted. The floor is wide relative to the headroom on this task; that is
-the measurement, not a setting you may change.
+Every experiment is the mean validation Dice of two fixed seeds. A change is
+kept only if that mean beats the incumbent by more than the measured noise
+floor (`manifests/w4_baseline_seed_band.json`, `keep_threshold_dice`, set
+as twice the largest scatter between baseline pairs and checked out of
+sample). Everything else is reverted. Ties are reverted. There is no second
+chance for a near miss. The floor is a measurement, not a setting you may
+change.
 
 ## Budget
 
-Each experiment trains for the fixed wall-clock budget in
-`scripts/climb_step.sh` (300 s on the GPU of record). You cannot change it.
-If a recipe runs out of GPU memory it is logged as `refused`.
-
-## What good experiments look like
-
-Prefer changes that a segmentation engineer would recognize as named
-decisions: how intensities are normalized, how patches are sampled, which
-loss, which optimizer and schedule, which augmentations, whether deeper
-supervision helps, how big the patch and the network should be for this
-field of view. Prefer one knob per experiment early; combine only after
-single knobs have been measured. When a change is reverted, write down why
-you think it lost before moving on.
+Each seed trains for the fixed wall-clock budget recorded in the noise-floor
+manifest (`budget_s`; 600 s on the GPU of record unless the pre-registered
+rule moved it to 900 s), two seeds per experiment. You cannot change it. If
+a recipe runs out of GPU memory it is logged as `refused`.
 
 ## What is forbidden
 
@@ -68,5 +59,7 @@ you think it lost before moving on.
   under `data/` by hand.
 - Writing to `results.tsv` yourself. Only `scripts/climb_step.sh` writes it.
 - Adding seeds, budget, or steps outside the harness.
+- Reading rows with `arm=random` to choose your next edit. They are the
+  control arm. Read only `baseline` and `agent` rows.
 - Stopping early because the score looks good. The campaign ends when the
   person running it ends it.

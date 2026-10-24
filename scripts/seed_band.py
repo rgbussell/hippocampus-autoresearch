@@ -1,43 +1,45 @@
 #!/usr/bin/env python3
-"""INS-2: measure the baseline noise floor, set the keep threshold, and check
-it out of sample (protocol v2, after EXP-005).
+"""INS-2 (protocol v3): the noise floor of TWO-SEED MEANS, the keep threshold,
+and an out-of-sample degeneracy check.
 
-    python scripts/seed_band.py --budget 300 --seeds 1337 2027 3117 --device cuda
-    python scripts/seed_band.py --reuse            # keep finished runs from the manifest
+    python scripts/seed_band.py --budget 600 --seeds 1337 2027 --calibration-pairs 3 \
+        --out manifests/w4_baseline_seed_band.json [--reuse]
 
-Runs the CURRENT recipe.py (the plain baseline at W2):
+Every campaign experiment is scored as the mean over the same two seeds, so
+the noise floor is measured on exactly that statistic:
 
-  1. once per seed                      -> cross-seed band, half_width_dice
-  2. --calibration-reruns more times with the first seed
-                                        -> same-seed scatter (wall-clock budget + cuDNN)
-  3. keep_threshold_dice = max(half_width, 2 x largest pairwise same-seed |delta|)
-  4. one FRESH same-seed rerun that took no part in step 3
-                                        -> degeneracy check: it must NOT be kept
+  1. --calibration-pairs runs of the baseline pair (both seeds)  -> pair means
+  2. keep_threshold_dice = max(half-width of the pair means,
+                               2 x largest pairwise |delta| of the pair means)
+  3. one FRESH pair that took no part in step 2: its mean must NOT be kept
+     against the calibration mean under the threshold (degeneracy check)
 
-Writes manifests/w2_baseline_seed_band.json. Exit 1 if the fresh rerun would
-have been kept: the gate is then measuring noise and the campaign must not
-start. EXP-005 showed why the fresh run matters: a threshold set equal to the
-one delta it is checked against passes by construction.
+Exit 1 if the fresh pair would have been kept. The budget rule of the W4
+pre-registration is reported as gate_ok (threshold <= gate_target).
+History: v1 (half-width of three single seeds) failed the check, EXP-005; v2
+(single-seed scatter with margin, out-of-sample rerun) passed at 300 s with a
+0.011 gate, EXP-006; v3 is the two-seed campaign protocol.
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import statistics
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
-from hippo.ledger import keep_decision, keep_threshold, pairwise_max_delta, seed_band  # noqa: E402
+from hippo.ledger import keep_threshold, pairwise_max_delta, two_seed_decision  # noqa: E402
 
-OUT = ROOT / "manifests" / "w2_baseline_seed_band.json"
 MARGIN = 2.0
+GATE_TARGET = 0.005  # pre-registered: if the gate is wider, re-measure once at the next budget
 
 
-def run(seed: int, budget: float, device: str, desc: str, verdict: str) -> dict:
-    run_dir = ROOT / "runs" / f"w2-{desc.replace(' ', '-')}-s{seed}"
+def run(seed: int, budget: float, device: str, desc: str, tag: str) -> dict:
+    run_dir = ROOT / "runs" / f"{tag}-{desc.replace(' ', '-')}-s{seed}"
     cmd = [
         sys.executable,
         str(ROOT / "train.py"),
@@ -50,7 +52,7 @@ def run(seed: int, budget: float, device: str, desc: str, verdict: str) -> dict:
         "--desc",
         desc,
         "--verdict",
-        verdict,
+        "baseline",
         "--arm",
         "baseline",
         "--run-dir",
@@ -69,91 +71,88 @@ def slim(r: dict) -> dict:
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--budget", type=float, default=300.0)
-    ap.add_argument("--seeds", type=int, nargs="+", default=[1337, 2027, 3117])
+    ap.add_argument("--budget", type=float, default=600.0)
+    ap.add_argument("--seeds", type=int, nargs="+", default=[1337, 2027])
     ap.add_argument("--device", default="cuda")
-    ap.add_argument("--calibration-reruns", type=int, default=3)
-    ap.add_argument("--reuse", action="store_true", help="reuse finished runs recorded in the manifest")
+    ap.add_argument("--calibration-pairs", type=int, default=3)
+    ap.add_argument("--out", type=Path, default=ROOT / "manifests" / "w4_baseline_seed_band.json")
+    ap.add_argument("--tag", default="w4")
+    ap.add_argument("--reuse", action="store_true", help="reuse finished pairs recorded in the manifest")
     args = ap.parse_args()
+    if len(args.seeds) < 2:
+        raise SystemExit("protocol v3 needs at least two seeds")
 
     prev: dict = {}
-    if args.reuse and OUT.exists():
-        prev = json.loads(OUT.read_text())
-        if prev.get("budget_s") != args.budget or prev.get("device") != args.device:
-            raise SystemExit("--reuse refused: budget or device differ from the manifest")
-    prev_runs = {r["seed"]: r for r in prev.get("runs", [])}
-    prev_cal = list(prev.get("calibration_reruns", []))
-    if "rerun_same_seed" in prev and not prev_cal:  # first-pass manifest (EXP-005)
-        prev_cal = [prev["rerun_same_seed"]]
+    if args.reuse and args.out.exists():
+        prev = json.loads(args.out.read_text())
+        if prev.get("budget_s") != args.budget or prev.get("seeds") != args.seeds:
+            raise SystemExit("--reuse refused: budget or seeds differ from the manifest")
+    label = f"{args.budget:g}s"
 
-    results = [
-        prev_runs.get(s) or slim(run(s, args.budget, args.device, "plain baseline", "baseline")) for s in args.seeds
-    ]
-    recipe = prev.get("recipe")
-    if recipe is None:
-        first = ROOT / "runs" / f"w2-plain-baseline-s{args.seeds[0]}" / "result.json"
-        recipe = json.loads(first.read_text())["recipe"]
-    scores = [r["val_dice_mean"] for r in results]
-    band = seed_band(scores)
+    def pair(k: int, kind: str) -> dict:
+        runs = [
+            slim(run(s, args.budget, args.device, f"plain baseline {label} {kind} pair {k}", args.tag))
+            for s in args.seeds
+        ]
+        return {"pair": k, "kind": kind, "runs": runs, "mean": float(statistics.mean(r["val_dice_mean"] for r in runs))}
 
-    s0 = args.seeds[0]
-    cal = list(prev_cal)
-    for i in range(len(cal), args.calibration_reruns):
-        cal.append(slim(run(s0, args.budget, args.device, f"plain baseline same-seed rerun {i + 1}", "baseline")))
-    same_seed_scores = [scores[0]] + [c["val_dice_mean"] for c in cal]
-    worst = pairwise_max_delta(same_seed_scores)
-    threshold = keep_threshold(band["half_width_dice"], [worst], MARGIN)
+    cal = list(prev.get("calibration_pairs", []))
+    for k in range(len(cal) + 1, args.calibration_pairs + 1):
+        cal.append(pair(k, "calibration"))
+    pair_means = [c["mean"] for c in cal]
+    half_width = float((max(pair_means) - min(pair_means)) / 2.0)
+    worst = pairwise_max_delta(pair_means)
+    threshold = keep_threshold(half_width, [worst], MARGIN)
+    mean = float(statistics.mean(pair_means))
 
-    fresh = prev.get("fresh_rerun")
-    if fresh is None:
-        fresh = slim(run(s0, args.budget, args.device, "plain baseline fresh rerun (out-of-sample check)", "baseline"))
-    fresh_delta = fresh["val_dice_mean"] - scores[0]
-    kept = keep_decision(fresh["val_dice_mean"], scores[0], threshold) == "kept"
-    half_width_kept = keep_decision(fresh["val_dice_mean"], scores[0], band["half_width_dice"]) == "kept"
+    fresh = prev.get("fresh_pair") or pair(args.calibration_pairs + 1, "fresh")
+    fresh_delta = fresh["mean"] - mean
+    kept = two_seed_decision(fresh["mean"], mean, threshold) == "kept"
 
-    out = dict(band)
-    out.update(
-        {
-            "protocol": "v2: threshold = max(half_width, margin x largest pairwise same-seed delta); "
-            "degeneracy checked out of sample with a fresh same-seed rerun",
-            "recipe": recipe,
-            "budget_s": args.budget,
-            "device": args.device,
-            "seeds": args.seeds,
-            "runs": results,
-            "calibration_reruns": cal,
-            "n_calibration_same_seed_reruns": len(cal),
-            "same_seed_scores": same_seed_scores,
-            "max_pairwise_same_seed_delta": worst,
-            "margin": MARGIN,
-            "keep_threshold_dice": threshold,
-            "keep_threshold_note": (
-                "half-width of the seed band"
-                if threshold == band["half_width_dice"]
-                else f"{MARGIN:g} x the largest pairwise same-seed delta (exceeds the half-width)"
-            ),
-            "fresh_rerun": fresh,
-            "fresh_rerun_delta": fresh_delta,
-            "fresh_rerun_kept": kept,
-            "rerun_same_seed_kept": kept,  # the INS-2 panel key: out-of-sample, under keep_threshold_dice
-            "fresh_rerun_kept_under_half_width": half_width_kept,
-        }
-    )
-    OUT.write_text(json.dumps(out, indent=1) + "\n")
+    first = ROOT / "runs" / f"{args.tag}-plain-baseline-{label}-calibration-pair-1-s{args.seeds[0]}" / "result.json"
+    recipe = prev.get("recipe") or json.loads(first.read_text())["recipe"]
+    out = {
+        "protocol": "v3: two-seed means; threshold = max(half-width of calibration pair means, "
+        "margin x largest pairwise delta); degeneracy checked out of sample with a fresh pair",
+        "recipe": recipe,
+        "budget_s": args.budget,
+        "device": args.device,
+        "seeds": args.seeds,
+        "seeds_per_experiment": len(args.seeds),
+        "n_calibration_pairs": len(cal),
+        "calibration_pairs": cal,
+        "pair_means": pair_means,
+        "mean": mean,
+        "min": float(min(pair_means)),
+        "max": float(max(pair_means)),
+        "half_width_dice": half_width,
+        "stdev": float(statistics.stdev(pair_means)) if len(pair_means) > 1 else 0.0,
+        "single_run_scores": [r["val_dice_mean"] for c in cal for r in c["runs"]],
+        "max_pairwise_pair_delta": worst,
+        "margin": MARGIN,
+        "keep_threshold_dice": threshold,
+        "gate_target": GATE_TARGET,
+        "gate_ok": threshold <= GATE_TARGET,
+        "fresh_pair": fresh,
+        "fresh_pair_delta": fresh_delta,
+        "fresh_pair_kept": kept,
+        "rerun_same_seed_kept": kept,  # the INS-2 panel key, kept for continuity
+    }
+    args.out.write_text(json.dumps(out, indent=1) + "\n")
     print(
         json.dumps(
             {
                 k: out[k]
                 for k in (
-                    "n_seeds",
-                    "scores",
+                    "budget_s",
+                    "pair_means",
                     "mean",
                     "half_width_dice",
-                    "same_seed_scores",
-                    "max_pairwise_same_seed_delta",
+                    "max_pairwise_pair_delta",
                     "keep_threshold_dice",
-                    "fresh_rerun_delta",
-                    "fresh_rerun_kept",
+                    "gate_ok",
+                    "fresh_pair_delta",
+                    "fresh_pair_kept",
                 )
             }
         )

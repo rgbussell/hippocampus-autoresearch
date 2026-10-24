@@ -163,6 +163,20 @@ smaller than the gate will be reverted even when real. A campaign that
 wants finer resolution must buy it with a longer budget or more seeds per
 experiment, and must say so in the ledger before it starts.
 
+**Protocol v3, the campaign (EXP-008).** The person running the program
+chose to buy resolution rather than accept a 0.011 gate: every campaign
+experiment trains the same two seeds (1337 and 2027) and is scored on their
+mean, the budget per seed rises from 300 s to 600 s, and the noise floor is
+re-measured on exactly that statistic: three calibration runs of the baseline
+pair give the half-width and the largest pairwise delta of the pair means,
+the threshold is `max(half-width, 2 x largest pairwise delta)`, and a fourth,
+fresh pair must not be kept against the calibration mean. A budget rule is
+written down before the measurement: if the gate at 600 s is still wider
+than 0.005 Dice, the band is measured once more at 900 s and that budget is
+used; there is no third try. With two seeds there is no confirm path: the
+mean either clears the gate or the edit is reverted. The incumbent of each
+arm is the baseline calibration mean until something is kept.
+
 ## 7. The null arms
 
 Three arms share the budget, the ruler, and the keep rule:
@@ -184,7 +198,7 @@ Three arms share the budget, the ruler, and the keep rule:
 `program.md` is the agent's standing instruction. It is written and edited
 by a person, never by the agent, and it states the objective, the single
 editable file, the budget, the keep rule, the log format, and the forbidden
-list. A campaign runs unattended for 6 to 8 hours, about 50 experiments,
+list. A campaign runs unattended, 25 experiments per arm at two seeds each,
 with each experiment writing only to a fresh run directory, `recipe.py`
 restored by git on every revert, and the harness refusing to start if any
 file other than `recipe.py` is modified. The random climber never touches
@@ -192,11 +206,17 @@ file other than `recipe.py` is modified. The random climber never touches
 arms share the ledger and the GPU but not the working tree. Before the first run, the claim
 and the kill condition are written to the program ledger:
 
-> Claim: within 50 experiments the agent keeps a recipe reaching at least
-> 0.87 validation mean Dice from the baseline, and at least three kept edits
-> correspond to named nnU-Net components.
+> Claim: within 25 experiments per arm, the agent keeps a recipe whose
+> two-seed validation mean reaches at least 0.89 Dice (the published
+> nnU-Net range on this task; the plain baseline is 0.878), and at least
+> three kept edits correspond to named nnU-Net components.
 > Kill: the random-edit climber's best matches the agent's best within the
 > noise floor, or any hold-out id appears in a log.
+
+The two arms alternate, one agent experiment then one random experiment,
+so drift in the shared GPU's load falls on both equally. The agent is told
+to read only the baseline and agent rows of `results.tsv`; the random arm's
+rows are the control, not free experiments.
 
 ## 9. The close
 

@@ -94,6 +94,13 @@ def pairwise_max_delta(scores: list[float]) -> float:
     return float(max((abs(a - b) for i, a in enumerate(scores) for b in scores[i + 1 :]), default=0.0))
 
 
+def two_seed_decision(candidate_mean: float, incumbent: float, threshold: float) -> str:
+    """kept | reverted. Protocol v3 (campaign): every experiment is the mean of
+    two fixed seeds, so there is no confirm path; the gain must clear the
+    threshold measured on two-seed means of the baseline."""
+    return "kept" if candidate_mean - incumbent > threshold else "reverted"
+
+
 def keep_decision(candidate: float, incumbent: float, half_width: float) -> str:
     """kept | confirm | reverted. The gate of INS-2.
 

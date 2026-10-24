@@ -16,6 +16,7 @@ from hippo.ledger import (  # noqa: E402
     pairwise_max_delta,
     read_rows,
     seed_band,
+    two_seed_decision,
 )
 
 
@@ -72,3 +73,11 @@ def test_ledger_append_and_numbering(tmp_path):
 def test_missing_column_is_refused(tmp_path):
     with pytest.raises(ValueError):
         append_row(tmp_path / "r.tsv", {"exp": 1})
+
+
+def test_two_seed_decision_has_no_confirm_path():
+    thr = 0.004
+    assert two_seed_decision(0.8850, 0.8800, thr) == "kept"
+    assert two_seed_decision(0.8830, 0.8800, thr) == "reverted"  # inside the gate: no second chance
+    assert two_seed_decision(0.8800, 0.8800, thr) == "reverted"
+    assert two_seed_decision(0.8800 + 0.999 * thr, 0.8800, thr) == "reverted"  # just inside the gate
